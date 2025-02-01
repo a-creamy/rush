@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::io;
 use std::process::{Command, Stdio};
-mod cd;
+pub mod cd;
 
 fn tokenize(input: &str) -> VecDeque<String> {
     let mut tokens = VecDeque::new();
@@ -46,9 +46,17 @@ pub fn execute(cmd: &str) {
     }
 
     if &args[0] == "cd" {
-        match cd::cd(&args[1]) {
+        let arg = if args.len() > 1 {
+            Some(args[1].as_str())
+        } else {
+            None
+        };
+        match cd::cd(arg) {
             Ok(()) => return,
-            Err(e) => eprintln!("cd: {}", e),
+            Err(e) => {
+                eprintln!("cd: {}", e);
+                return;
+            }
         }
     }
 
@@ -56,6 +64,6 @@ pub fn execute(cmd: &str) {
         let args_slice: Vec<&str> = args.iter().skip(1).map(|s| s.as_str()).collect();
         let _ = run_program(&args[0], &args_slice);
     } else {
-        eprintln!("rush: {}: command not found", cmd);
+        eprintln!("rush: {}: command not found", &args[0]);
     }
 }
