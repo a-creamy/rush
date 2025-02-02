@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::io;
 use std::process::{Command, Stdio};
-pub mod cd;
+pub mod dir;
 
 fn tokenize(input: &str) -> VecDeque<String> {
     let mut tokens = VecDeque::new();
@@ -51,7 +51,7 @@ pub fn execute(cmd: &str) {
         } else {
             None
         };
-        match cd::cd(arg) {
+        match dir::cd(arg) {
             Ok(()) => return,
             Err(e) => {
                 eprintln!("cd: {}", e);
