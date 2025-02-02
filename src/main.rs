@@ -1,9 +1,14 @@
 use crate::rush::run;
+use libc::{signal, SIGINT, SIG_IGN};
 use std::env::{self};
 use std::path::PathBuf;
 mod rush;
 
 fn main() {
+    unsafe {
+        signal(SIGINT, SIG_IGN);
+    }
+
     let mut shell = rush::Rush::new(None);
     let mut original_dir = match env::current_dir() {
         Ok(path) => path,
