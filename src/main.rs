@@ -14,7 +14,7 @@ fn main() {
         Ok(path) => path,
         Err(e) => {
             eprintln!("Failed to get current directory: {}", e);
-            return;
+            PathBuf::new()
         }
     };
 

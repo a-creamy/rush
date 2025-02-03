@@ -23,7 +23,13 @@ impl Rush {
         });
 
         let dir = match env::current_dir() {
-            Ok(path) => path,
+            Ok(path) => {
+                if path == PathBuf::from(run::dir::home_directory().unwrap()) {
+                    PathBuf::from("~")
+                } else {
+                    path
+                }
+            }
             Err(e) => {
                 eprintln!("Failed to get current directory: {}", e);
                 let default_prompt = format!("[{}@{} unknown]$", username, hostname);
