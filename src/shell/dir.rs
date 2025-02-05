@@ -33,6 +33,11 @@ pub fn current() -> io::Result<PathBuf> {
     match env::current_dir() {
         Ok(path) => {
             let home = PathBuf::from(home_dir()?);
+
+            if path == home {
+                return Ok(PathBuf::from("~"));
+            }
+
             if let Ok(relative_path) = path.strip_prefix(&home) {
                 let mut new_path = PathBuf::from("~");
                 new_path.push(relative_path);
