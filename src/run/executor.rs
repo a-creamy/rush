@@ -9,12 +9,14 @@ pub fn execute(ast: node::AST) {
                 cmd.args(&args[1..]);
             }
 
-            cmd.stdin(Stdio::inherit())
-                .stdout(Stdio::inherit())
-                .spawn()
-                .expect("rush: Failed to execute command")
-                .wait()
-                .unwrap();
+            match cmd.stdin(Stdio::inherit()).stdout(Stdio::inherit()).spawn() {
+                Ok(mut child) => {
+                    child.wait().unwrap();
+                }
+                Err(e) => {
+                    eprintln!("rush: {}", e);
+                }
+            }
         }
         node::AST::Pipeline(commands) => {
             let mut previous_stdout = None;
@@ -33,13 +35,21 @@ pub fn execute(ast: node::AST) {
                 }
 
                 let mut child = if i == commands.len() - 1 {
-                    cmd.stdout(Stdio::inherit())
-                        .spawn()
-                        .expect("rush: Failed to execute command")
+                    match cmd.stdout(Stdio::inherit()).spawn() {
+                        Ok(child) => child,
+                        Err(e) => {
+                            eprintln!("rush: {}", e);
+                            return;
+                        }
+                    }
                 } else {
-                    cmd.stdout(Stdio::piped())
-                        .spawn()
-                        .expect("rush: Failed to execute command")
+                    match cmd.stdout(Stdio::piped()).spawn() {
+                        Ok(child) => child,
+                        Err(e) => {
+                            eprintln!("rush: {}", e);
+                            return;
+                        }
+                    }
                 };
 
                 previous_stdout = child.stdout.take();
