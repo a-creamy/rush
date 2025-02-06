@@ -1,3 +1,4 @@
+use crate::run;
 use std::io::{self, stdin, stdout, Write};
 use std::str;
 mod dir;
@@ -43,7 +44,7 @@ pub fn run() {
     loop {
         shell.handle_dir();
         match shell.input() {
-            Ok(output) => println!("{output}"),
+            Ok(input) => run::execute(input.as_str()),
             Err(e) => eprintln!("{e}"),
         }
     }
