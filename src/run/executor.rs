@@ -1,24 +1,36 @@
 use crate::run::node;
+use std::fs::{File, OpenOptions};
 use std::process::{Child, Command, Stdio};
 
 pub fn execute(ast: node::AST) {
     match ast {
-        node::AST::Command(args) => {
+        node::AST::Command(args, output) => {
             let mut cmd = Command::new(&args[0]);
             if args.len() > 1 {
                 cmd.args(&args[1..]);
             }
 
-            match cmd.stdin(Stdio::inherit()).stdout(Stdio::inherit()).spawn() {
-                Ok(mut child) => {
-                    child.wait().unwrap();
+            cmd.stdin(Stdio::inherit());
+
+            if let Some((file, append)) = output {
+                let file = if append {
+                    OpenOptions::new().append(true).create(true).open(file)
+                } else {
+                    File::create(file)
                 }
-                Err(e) => {
-                    eprintln!("rush: {}", e);
-                }
+                .expect("rush: Failed to open output file");
+
+                cmd.stdout(Stdio::from(file));
+            } else {
+                cmd.stdout(Stdio::inherit());
             }
+
+            cmd.spawn()
+                .expect("rush: Failed to execute command")
+                .wait()
+                .unwrap();
         }
-        node::AST::Pipeline(commands) => {
+        node::AST::Pipeline(commands, output) => {
             let mut previous_stdout = None;
             let mut children: Vec<Child> = Vec::new();
 
@@ -34,24 +46,24 @@ pub fn execute(ast: node::AST) {
                     cmd.stdin(Stdio::inherit());
                 }
 
-                let mut child = if i == commands.len() - 1 {
-                    match cmd.stdout(Stdio::inherit()).spawn() {
-                        Ok(child) => child,
-                        Err(e) => {
-                            eprintln!("rush: {}", e);
-                            return;
+                if i == commands.len() - 1 {
+                    if let Some((file, append)) = &output {
+                        let file = if *append {
+                            OpenOptions::new().append(true).create(true).open(file)
+                        } else {
+                            File::create(file)
                         }
+                        .expect("rush: Failed to open output file");
+
+                        cmd.stdout(Stdio::from(file));
+                    } else {
+                        cmd.stdout(Stdio::inherit());
                     }
                 } else {
-                    match cmd.stdout(Stdio::piped()).spawn() {
-                        Ok(child) => child,
-                        Err(e) => {
-                            eprintln!("rush: {}", e);
-                            return;
-                        }
-                    }
-                };
+                    cmd.stdout(Stdio::piped());
+                }
 
+                let mut child = cmd.spawn().expect("rush: Failed to execute command");
                 previous_stdout = child.stdout.take();
                 children.push(child);
             }

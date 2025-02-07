@@ -1,14 +1,41 @@
+use std::path::{self, PathBuf};
+
 use crate::run::node;
 
 pub fn parse(input: &str) -> node::AST {
-    let commands: Vec<Vec<String>> = input
-        .split("|")
-        .map(|cmd| cmd.split_whitespace().map(String::from).collect())
-        .collect();
+    let mut parts = input.split_whitespace().peekable();
+    let mut commands = Vec::new();
+    let mut current_cmd = Vec::new();
+    let mut output_file = None;
+    let mut append = false;
+
+    while let Some(token) = parts.next() {
+        match token {
+            "|" => {
+                if !current_cmd.is_empty() {
+                    commands.push(current_cmd);
+                    current_cmd = Vec::new();
+                }
+            }
+            ">" | ">>" => {
+                if let Some(file) = parts.next() {
+                    output_file = Some(PathBuf::from(file));
+                    append = token == ">>";
+                }
+            }
+            _ => {
+                current_cmd.push(token.to_string());
+            }
+        }
+    }
+
+    if !current_cmd.is_empty() {
+        commands.push(current_cmd);
+    }
 
     if commands.len() == 1 {
-        node::AST::Command(commands.into_iter().next().unwrap())
+        return node::AST::Command(commands.remove(0), output_file.map(|f| (f, append)));
     } else {
-        node::AST::Pipeline(commands)
+        return node::AST::Pipeline(commands, output_file.map(|f| (f, append)));
     }
 }
