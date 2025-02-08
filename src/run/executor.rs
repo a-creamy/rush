@@ -1,3 +1,4 @@
+use crate::run::bic;
 use crate::run::node;
 use std::fs::{File, OpenOptions};
 use std::process::{Child, Command, Stdio};
@@ -5,6 +6,28 @@ use std::process::{Child, Command, Stdio};
 pub fn execute(ast: node::AST) {
     match ast {
         node::AST::Command(args, output) => {
+            if args[0] == "cd" {
+                if args.len() > 1 {
+                    match bic::cd(&args[1]) {
+                        Ok(_) => (),
+                        Err(e) => eprintln!("{e}"),
+                    }
+                } else {
+                    match bic::cd("~") {
+                        Ok(_) => (),
+                        Err(e) => eprintln!("{e}"),
+                    }
+                }
+                return;
+            } else if args[0] == "exit" {
+                let code = if args.len() > 1 {
+                    args[1].parse::<i32>().unwrap_or(0)
+                } else {
+                    0
+                };
+                bic::exit(code);
+            }
+
             let mut cmd = Command::new(&args[0]);
             if args.len() > 1 {
                 cmd.args(&args[1..]);
@@ -35,6 +58,28 @@ pub fn execute(ast: node::AST) {
             let mut children: Vec<Child> = Vec::new();
 
             for (i, command) in commands.iter().enumerate() {
+                if command[0] == "cd" {
+                    if command.len() > 1 {
+                        match bic::cd(&command[1]) {
+                            Ok(_) => (),
+                            Err(e) => eprintln!("{e}"),
+                        }
+                    } else {
+                        match bic::cd("~") {
+                            Ok(_) => (),
+                            Err(e) => eprintln!("{e}"),
+                        }
+                    }
+                    continue;
+                } else if command[0] == "exit" {
+                    let code = if command.len() > 1 {
+                        command[1].parse::<i32>().unwrap_or(0)
+                    } else {
+                        0
+                    };
+                    bic::exit(code);
+                }
+
                 let mut cmd = Command::new(&command[0]);
                 if command.len() > 1 {
                     cmd.args(&command[1..]);
