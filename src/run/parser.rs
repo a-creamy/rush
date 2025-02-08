@@ -1,6 +1,5 @@
-use std::path::{self, PathBuf};
-
 use crate::run::node;
+use std::path::PathBuf;
 
 pub fn parse(input: &str) -> node::AST {
     let mut parts = input.split_whitespace().peekable();
