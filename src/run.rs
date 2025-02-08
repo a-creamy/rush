@@ -1,3 +1,4 @@
+mod bic;
 mod executor;
 mod node;
 mod parser;
