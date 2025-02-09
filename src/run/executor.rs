@@ -7,15 +7,11 @@ pub fn execute(ast: node::AST) {
     match ast {
         node::AST::Command(args, output) => {
             if args[0] == "cd" {
-                let arg = if args.len() > 1 {
-                    &args[1]
-                } else {
-                    "~"
-                };
+                let arg = if args.len() > 1 { &args[1] } else { "~" };
 
                 match bic::cd(arg) {
                     Ok(_) => return,
-                    Err(e) => eprintln!("{e}")
+                    Err(e) => eprintln!("{e}"),
                 }
             } else if args[0] == "exit" {
                 let code = if args.len() > 1 {
@@ -57,15 +53,11 @@ pub fn execute(ast: node::AST) {
 
             for (i, command) in commands.iter().enumerate() {
                 if command[0] == "cd" {
-                    let arg = if command.len() > 1 {
-                        &command[1]
-                    } else {
-                        "~"
-                    };
+                    let arg = if command.len() > 1 { &command[1] } else { "~" };
 
                     match bic::cd(arg) {
                         Ok(_) => continue,
-                        Err(e) => eprintln!("{e}")
+                        Err(e) => eprintln!("{e}"),
                     }
                 } else if command[0] == "exit" {
                     let code = if command.len() > 1 {
@@ -114,6 +106,49 @@ pub fn execute(ast: node::AST) {
                     .wait()
                     .expect("rush: Failed to wait for child process");
             }
+        }
+        node::AST::AndList(commands) => for command in commands {
+            let status = execute_status(command);
+            if !status.success() {
+                break;
+            }
+        },
+    }
+}
+
+fn execute_status(ast: node::AST) -> std::process::ExitStatus {
+    match ast {
+        node::AST::Command(args, output) => {
+            let mut cmd = Command::new(&args[0]);
+            if args.len() > 1 {
+                cmd.args(&args[1..]);
+            }
+            let stdout = if let Some((file, append)) = output {
+                let file = std::fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .append(append)
+                    .open(file)
+                    .expect("rush: Failed to open file for redirection");
+                Stdio::from(file)
+            } else {
+                Stdio::inherit()
+            };
+
+            let status = cmd
+                .stdin(Stdio::inherit())
+                .stdout(stdout)
+                .spawn()
+                .expect("rush: Failed to execute command")
+                .wait()
+                .expect("rush: Failed to wait for command");
+
+            status
+        }
+        _ => {
+            execute(ast);
+            // Assume that the command successfully succeded
+            return std::process::ExitStatus::default();
         }
     }
 }
