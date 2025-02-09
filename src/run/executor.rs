@@ -15,7 +15,7 @@ pub fn execute(ast: node::AST) -> Result<(), ShellError> {
             } else if args[0] == "exit" {
                 let code = if args.len() > 1 {
                     args[1].parse::<i32>().map_err(|_| {
-                        ShellError::InvalidArgument("exit code must be a number".to_string())
+                        ShellError::InvalidArgument("Exit code must be a number".to_string())
                     })?
                 } else {
                     0
