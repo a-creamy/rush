@@ -1,19 +1,22 @@
+use crate::run::error::ShellError;
 use crate::run::bic;
 use crate::run::node;
 use std::fs::{File, OpenOptions};
 use std::io;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command, ExitStatus, Stdio};
 
-pub fn execute(ast: node::AST) -> io::Result<()> {
+pub fn execute(ast: node::AST) -> Result<(), ShellError> {
     match ast {
         node::AST::Command(args, output) => {
             if args[0] == "cd" {
                 let arg = if args.len() > 1 { &args[1] } else { "~" };
-                bic::cd(arg).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                bic::cd(arg).map_err(|e| ShellError::BicError(e))?;
                 return Ok(());
             } else if args[0] == "exit" {
                 let code = if args.len() > 1 {
-                    args[1].parse::<i32>().unwrap_or(0)
+                    args[1].parse::<i32>().map_err(|_| {
+                        ShellError::InvalidArgument("exit code must be a number".to_string())
+                    })?
                 } else {
                     0
                 };
@@ -24,7 +27,6 @@ pub fn execute(ast: node::AST) -> io::Result<()> {
             if args.len() > 1 {
                 cmd.args(&args[1..]);
             }
-
             cmd.stdin(Stdio::inherit());
 
             if let Some((file, append)) = output {
@@ -33,21 +35,22 @@ pub fn execute(ast: node::AST) -> io::Result<()> {
                 } else {
                     File::create(file)
                 }
-                .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to open output file: {}", e)))?;
-
+                .map_err(|e| ShellError::from(e))?;
                 cmd.stdout(Stdio::from(file));
             } else {
                 cmd.stdout(Stdio::inherit());
             }
 
-            let mut child = cmd
-                .spawn()
-                .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to execute command: {}", e)))?;
-            
-            child
-                .wait()
-                .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to wait for command: {}", e)))?;
-            
+            let mut child = cmd.spawn().map_err(|e| {
+                if e.kind() == io::ErrorKind::NotFound {
+                    ShellError::CommandNotFound(args[0].clone())
+                } else {
+                    ShellError::IoError(e)
+                }
+            })?;
+
+            child.wait().map_err(|e| ShellError::from(e))?;
+
             Ok(())
         }
         node::AST::Pipeline(commands, output) => {
@@ -57,7 +60,7 @@ pub fn execute(ast: node::AST) -> io::Result<()> {
             for (i, command) in commands.iter().enumerate() {
                 if command[0] == "cd" {
                     let arg = if command.len() > 1 { &command[1] } else { "~" };
-                    bic::cd(arg).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                    bic::cd(arg).map_err(|e| ShellError::InvalidArgument(e))?;
                     continue;
                 } else if command[0] == "exit" {
                     let code = if command.len() > 1 {
@@ -86,8 +89,7 @@ pub fn execute(ast: node::AST) -> io::Result<()> {
                         } else {
                             File::create(file)
                         }
-                        .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to open output file: {}", e)))?;
-
+                        .map_err(|e| ShellError::from(e))?;
                         cmd.stdout(Stdio::from(file));
                     } else {
                         cmd.stdout(Stdio::inherit());
@@ -96,17 +98,13 @@ pub fn execute(ast: node::AST) -> io::Result<()> {
                     cmd.stdout(Stdio::piped());
                 }
 
-                let mut child = cmd
-                    .spawn()
-                    .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to execute command: {}", e)))?;
+                let mut child = cmd.spawn().map_err(|e| ShellError::from(e))?;
                 previous_stdout = child.stdout.take();
                 children.push(child);
             }
 
             for mut child in children {
-                child
-                    .wait()
-                    .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to wait for child process: {}", e)))?;
+                child.wait().map_err(|e| ShellError::from(e))?;
             }
 
             Ok(())
@@ -123,7 +121,7 @@ pub fn execute(ast: node::AST) -> io::Result<()> {
     }
 }
 
-fn execute_status(ast: node::AST) -> io::Result<std::process::ExitStatus> {
+fn execute_status(ast: node::AST) -> Result<ExitStatus, ShellError> {
     match ast {
         node::AST::Command(args, output) => {
             let mut cmd = Command::new(&args[0]);
@@ -131,12 +129,12 @@ fn execute_status(ast: node::AST) -> io::Result<std::process::ExitStatus> {
                 cmd.args(&args[1..]);
             }
             let stdout = if let Some((file, append)) = output {
-                let file = std::fs::OpenOptions::new()
+                let file = OpenOptions::new()
                     .write(true)
                     .create(true)
                     .append(append)
                     .open(file)
-                    .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to open file for redirection: {}", e)))?;
+                    .map_err(|e| ShellError::from(e))?;
                 Stdio::from(file)
             } else {
                 Stdio::inherit()
@@ -146,15 +144,13 @@ fn execute_status(ast: node::AST) -> io::Result<std::process::ExitStatus> {
                 .stdin(Stdio::inherit())
                 .stdout(stdout)
                 .spawn()
-                .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to execute command: {}", e)))?;
-
-            child
-                .wait()
-                .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to wait for command: {}", e)))
+                .map_err(|e| ShellError::from(e))?;
+            child.wait().map_err(|e| ShellError::from(e))
         }
         _ => {
+            // For non-command AST nodes, we call execute recursively.
             execute(ast)?;
-            Ok(std::process::ExitStatus::default())
+            Ok(ExitStatus::default())
         }
     }
 }
