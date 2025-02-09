@@ -44,7 +44,9 @@ pub fn run() {
     loop {
         shell.handle_dir();
         match shell.input() {
-            Ok(input) => run::execute(input.as_str()),
+            Ok(input) => { 
+                run::execute(input.as_str())
+            },
             Err(e) => eprintln!("{e}"),
         }
     }
