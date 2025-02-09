@@ -1,18 +1,16 @@
 use crate::run::bic;
 use crate::run::node;
 use std::fs::{File, OpenOptions};
+use std::io;
 use std::process::{Child, Command, Stdio};
 
-pub fn execute(ast: node::AST) {
+pub fn execute(ast: node::AST) -> io::Result<()> {
     match ast {
         node::AST::Command(args, output) => {
             if args[0] == "cd" {
                 let arg = if args.len() > 1 { &args[1] } else { "~" };
-
-                match bic::cd(arg) {
-                    Ok(_) => return,
-                    Err(e) => eprintln!("{e}"),
-                }
+                bic::cd(arg).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                return Ok(());
             } else if args[0] == "exit" {
                 let code = if args.len() > 1 {
                     args[1].parse::<i32>().unwrap_or(0)
@@ -35,17 +33,22 @@ pub fn execute(ast: node::AST) {
                 } else {
                     File::create(file)
                 }
-                .expect("rush: Failed to open output file");
+                .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to open output file: {}", e)))?;
 
                 cmd.stdout(Stdio::from(file));
             } else {
                 cmd.stdout(Stdio::inherit());
             }
 
-            cmd.spawn()
-                .expect("rush: Failed to execute command")
+            let mut child = cmd
+                .spawn()
+                .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to execute command: {}", e)))?;
+            
+            child
                 .wait()
-                .unwrap();
+                .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to wait for command: {}", e)))?;
+            
+            Ok(())
         }
         node::AST::Pipeline(commands, output) => {
             let mut previous_stdout = None;
@@ -54,11 +57,8 @@ pub fn execute(ast: node::AST) {
             for (i, command) in commands.iter().enumerate() {
                 if command[0] == "cd" {
                     let arg = if command.len() > 1 { &command[1] } else { "~" };
-
-                    match bic::cd(arg) {
-                        Ok(_) => continue,
-                        Err(e) => eprintln!("{e}"),
-                    }
+                    bic::cd(arg).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                    continue;
                 } else if command[0] == "exit" {
                     let code = if command.len() > 1 {
                         command[1].parse::<i32>().unwrap_or(0)
@@ -86,7 +86,7 @@ pub fn execute(ast: node::AST) {
                         } else {
                             File::create(file)
                         }
-                        .expect("rush: Failed to open output file");
+                        .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to open output file: {}", e)))?;
 
                         cmd.stdout(Stdio::from(file));
                     } else {
@@ -96,7 +96,9 @@ pub fn execute(ast: node::AST) {
                     cmd.stdout(Stdio::piped());
                 }
 
-                let mut child = cmd.spawn().expect("rush: Failed to execute command");
+                let mut child = cmd
+                    .spawn()
+                    .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to execute command: {}", e)))?;
                 previous_stdout = child.stdout.take();
                 children.push(child);
             }
@@ -104,19 +106,24 @@ pub fn execute(ast: node::AST) {
             for mut child in children {
                 child
                     .wait()
-                    .expect("rush: Failed to wait for child process");
+                    .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to wait for child process: {}", e)))?;
             }
+
+            Ok(())
         }
-        node::AST::AndList(commands) => for command in commands {
-            let status = execute_status(command);
-            if !status.success() {
-                break;
+        node::AST::AndList(commands) => {
+            for command in commands {
+                let status = execute_status(command)?;
+                if !status.success() {
+                    break;
+                }
             }
-        },
+            Ok(())
+        }
     }
 }
 
-fn execute_status(ast: node::AST) -> std::process::ExitStatus {
+fn execute_status(ast: node::AST) -> io::Result<std::process::ExitStatus> {
     match ast {
         node::AST::Command(args, output) => {
             let mut cmd = Command::new(&args[0]);
@@ -129,26 +136,25 @@ fn execute_status(ast: node::AST) -> std::process::ExitStatus {
                     .create(true)
                     .append(append)
                     .open(file)
-                    .expect("rush: Failed to open file for redirection");
+                    .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to open file for redirection: {}", e)))?;
                 Stdio::from(file)
             } else {
                 Stdio::inherit()
             };
 
-            let status = cmd
+            let mut child = cmd
                 .stdin(Stdio::inherit())
                 .stdout(stdout)
                 .spawn()
-                .expect("rush: Failed to execute command")
-                .wait()
-                .expect("rush: Failed to wait for command");
+                .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to execute command: {}", e)))?;
 
-            status
+            child
+                .wait()
+                .map_err(|e| io::Error::new(e.kind(), format!("rush: Failed to wait for command: {}", e)))
         }
         _ => {
-            execute(ast);
-            // Assume that the command successfully succeded
-            return std::process::ExitStatus::default();
+            execute(ast)?;
+            Ok(std::process::ExitStatus::default())
         }
     }
 }

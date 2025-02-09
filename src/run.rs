@@ -4,5 +4,8 @@ mod node;
 mod parser;
 
 pub fn execute(input: &str) {
-    executor::execute(parser::parse(input));
+    match executor::execute(parser::parse(input)) {
+        Ok(()) => (),
+        Err(e) => eprintln!("{e}")
+    }
 }
