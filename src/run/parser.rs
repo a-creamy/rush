@@ -23,6 +23,7 @@ pub fn parse_single_command(input: &str) -> node::AST {
     let mut current_cmd = Vec::new();
     let mut output_file = None;
     let mut append = false;
+    let mut background = false;
 
     while let Some(token) = parts.next() {
         match token {
@@ -38,6 +39,13 @@ pub fn parse_single_command(input: &str) -> node::AST {
                     append = token == ">>";
                 }
             }
+            "&" => {
+                if parts.peek().is_none() {
+                    background = true;
+                } else {
+                    current_cmd.push(token.to_string());
+                }
+            }
             _ => {
                 current_cmd.push(token.to_string());
             }
@@ -49,8 +57,8 @@ pub fn parse_single_command(input: &str) -> node::AST {
     }
 
     if commands.len() == 1 {
-        return node::AST::Command(commands.remove(0), output_file.map(|f| (f, append)));
+        node::AST::Command(commands.remove(0), output_file.map(|f| (f, append)), background)
     } else {
-        return node::AST::Pipeline(commands, output_file.map(|f| (f, append)));
+        node::AST::Pipeline(commands, output_file.map(|f| (f, append)), background)
     }
 }
