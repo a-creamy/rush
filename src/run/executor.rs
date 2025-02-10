@@ -7,7 +7,7 @@ use std::process::{Child, Command, ExitStatus, Stdio};
 
 pub fn execute(ast: node::AST) -> Result<(), ShellError> {
     match ast {
-        node::AST::Command(args, output) => {
+        node::AST::Command(args, output, background) => {
             if args[0] == "cd" {
                 let arg = if args.len() > 1 { &args[1] } else { "~" };
                 bic::cd(arg).map_err(|e| ShellError::BicError(e))?;
@@ -27,7 +27,12 @@ pub fn execute(ast: node::AST) -> Result<(), ShellError> {
             if args.len() > 1 {
                 cmd.args(&args[1..]);
             }
-            cmd.stdin(Stdio::inherit());
+
+            cmd.stdin(if background {
+                Stdio::null()
+            } else {
+                Stdio::inherit()
+            });
 
             if let Some((file, append)) = output {
                 let file = if append {
@@ -49,26 +54,19 @@ pub fn execute(ast: node::AST) -> Result<(), ShellError> {
                 }
             })?;
 
-            child.wait().map_err(|e| ShellError::from(e))?;
+            if !background {
+                child.wait().map_err(|e| ShellError::from(e))?;
+            }
 
             Ok(())
         }
-        node::AST::Pipeline(commands, output) => {
+        node::AST::Pipeline(commands, output, background) => {
             let mut previous_stdout = None;
             let mut children: Vec<Child> = Vec::new();
 
             for (i, command) in commands.iter().enumerate() {
-                if command[0] == "cd" {
-                    let arg = if command.len() > 1 { &command[1] } else { "~" };
-                    bic::cd(arg).map_err(|e| ShellError::InvalidArgument(e))?;
+                if command[0] == "cd" || command[0] == "exit" {
                     continue;
-                } else if command[0] == "exit" {
-                    let code = if command.len() > 1 {
-                        command[1].parse::<i32>().unwrap_or(0)
-                    } else {
-                        0
-                    };
-                    bic::exit(code);
                 }
 
                 let mut cmd = Command::new(&command[0]);
@@ -79,7 +77,11 @@ pub fn execute(ast: node::AST) -> Result<(), ShellError> {
                 if let Some(stdout) = previous_stdout {
                     cmd.stdin(stdout);
                 } else {
-                    cmd.stdin(Stdio::inherit());
+                    cmd.stdin(if background {
+                        Stdio::null()
+                    } else {
+                        Stdio::inherit()
+                    });
                 }
 
                 if i == commands.len() - 1 {
@@ -103,8 +105,10 @@ pub fn execute(ast: node::AST) -> Result<(), ShellError> {
                 children.push(child);
             }
 
-            for mut child in children {
-                child.wait().map_err(|e| ShellError::from(e))?;
+            if !background {
+                for mut child in children {
+                    child.wait().map_err(|e| ShellError::from(e))?;
+                }
             }
 
             Ok(())
@@ -123,7 +127,7 @@ pub fn execute(ast: node::AST) -> Result<(), ShellError> {
 
 fn execute_status(ast: node::AST) -> Result<ExitStatus, ShellError> {
     match ast {
-        node::AST::Command(args, output) => {
+        node::AST::Command(args, output, background) => {
             let mut cmd = Command::new(&args[0]);
             if args.len() > 1 {
                 cmd.args(&args[1..]);
@@ -141,14 +145,22 @@ fn execute_status(ast: node::AST) -> Result<ExitStatus, ShellError> {
             };
 
             let mut child = cmd
-                .stdin(Stdio::inherit())
+                .stdin(if background {
+                    Stdio::null()
+                } else {
+                    Stdio::inherit()
+                })
                 .stdout(stdout)
                 .spawn()
                 .map_err(|e| ShellError::from(e))?;
-            child.wait().map_err(|e| ShellError::from(e))
+
+            if background {
+                Ok(ExitStatus::default())
+            } else {
+                child.wait().map_err(|e| ShellError::from(e))
+            }
         }
         _ => {
-            // For non-command AST nodes, we call execute recursively.
             execute(ast)?;
             Ok(ExitStatus::default())
         }
