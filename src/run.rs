@@ -1,24 +1,16 @@
+mod ast;
 mod bic;
 mod error;
 mod executor;
 mod node;
-mod parser;
+mod tokenizer;
 use crate::run::error::ShellError;
 
 pub fn execute(input: &str) {
-    match executor::execute(parser::parse(input)) {
-        Ok(()) => (),
-        Err(ShellError::CommandNotFound(cmd)) => {
-            eprintln!("rush: Unknown Command: {}", cmd)
-        }
-        Err(ShellError::InvalidArgument(msg)) => {
-            eprintln!("rush: {}", msg)
-        }
-        Err(ShellError::BicError(msg)) => {
-            eprintln!("{msg}")
-        }
-        Err(ShellError::IoError(e)) => {
-            eprintln!("rush: {}", e)
-        }
+    let tokens = tokenizer::tokenize(input);
+    let ast = ast::parse(&tokens).expect("Parsing failed");
+    match executor::execute(&ast) {
+        Ok(_) => (),
+        Err(e) => eprintln!("rush: {e}")
     }
 }

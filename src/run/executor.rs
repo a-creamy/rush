@@ -1,168 +1,108 @@
-use crate::run::error::ShellError;
+use super::error::ShellError;
+use super::node::AST;
 use crate::run::bic;
+use crate::run::error;
 use crate::run::node;
-use std::fs::{File, OpenOptions};
+use std::process::{Command, Stdio};
 use std::io;
-use std::process::{Child, Command, ExitStatus, Stdio};
 
-pub fn execute(ast: node::AST) -> Result<(), ShellError> {
-    match ast {
-        node::AST::Command(args, output, background) => {
-            if args[0] == "cd" {
-                let arg = if args.len() > 1 { &args[1] } else { "~" };
-                bic::cd(arg).map_err(|e| ShellError::BicError(e))?;
-                return Ok(());
-            } else if args[0] == "exit" {
-                let code = if args.len() > 1 {
-                    args[1].parse::<i32>().map_err(|_| {
-                        ShellError::InvalidArgument("Exit code must be a number".to_string())
-                    })?
-                } else {
-                    0
-                };
-                bic::exit(code);
-            }
-
-            let mut cmd = Command::new(&args[0]);
-            if args.len() > 1 {
-                cmd.args(&args[1..]);
-            }
-
-            cmd.stdin(if background {
-                Stdio::null()
-            } else {
-                Stdio::inherit()
-            });
-
-            if let Some((file, append)) = output {
-                let file = if append {
-                    OpenOptions::new().append(true).create(true).open(file)
-                } else {
-                    File::create(file)
-                }
-                .map_err(|e| ShellError::from(e))?;
-                cmd.stdout(Stdio::from(file));
-            } else {
-                cmd.stdout(Stdio::inherit());
-            }
-
-            let mut child = cmd.spawn().map_err(|e| {
-                if e.kind() == io::ErrorKind::NotFound {
-                    ShellError::CommandNotFound(args[0].clone())
-                } else {
-                    ShellError::IoError(e)
-                }
-            })?;
-
-            if !background {
-                child.wait().map_err(|e| ShellError::from(e))?;
-            }
-
-            Ok(())
-        }
-        node::AST::Pipeline(commands, output, background) => {
-            let mut previous_stdout = None;
-            let mut children: Vec<Child> = Vec::new();
-
-            for (i, command) in commands.iter().enumerate() {
-                if command[0] == "cd" || command[0] == "exit" {
-                    continue;
-                }
-
-                let mut cmd = Command::new(&command[0]);
-                if command.len() > 1 {
-                    cmd.args(&command[1..]);
-                }
-
-                if let Some(stdout) = previous_stdout {
-                    cmd.stdin(stdout);
-                } else {
-                    cmd.stdin(if background {
-                        Stdio::null()
-                    } else {
-                        Stdio::inherit()
-                    });
-                }
-
-                if i == commands.len() - 1 {
-                    if let Some((file, append)) = &output {
-                        let file = if *append {
-                            OpenOptions::new().append(true).create(true).open(file)
-                        } else {
-                            File::create(file)
-                        }
-                        .map_err(|e| ShellError::from(e))?;
-                        cmd.stdout(Stdio::from(file));
-                    } else {
-                        cmd.stdout(Stdio::inherit());
-                    }
-                } else {
-                    cmd.stdout(Stdio::piped());
-                }
-
-                let mut child = cmd.spawn().map_err(|e| ShellError::from(e))?;
-                previous_stdout = child.stdout.take();
-                children.push(child);
-            }
-
-            if !background {
-                for mut child in children {
-                    child.wait().map_err(|e| ShellError::from(e))?;
-                }
-            }
-
-            Ok(())
-        }
-        node::AST::AndList(commands) => {
-            for command in commands {
-                let status = execute_status(command)?;
-                if !status.success() {
-                    break;
-                }
-            }
-            Ok(())
-        }
+pub fn execute(node: &AST) -> Result<(), ShellError> {
+    match node {
+        AST::Command(args) => execute_command(args),
+        AST::Pipeline {
+            operator: _,
+            lhs,
+            rhs,
+        } => execute_pipeline(lhs, rhs),
+        AST::AndLogical {
+            operator: _,
+            lhs,
+            rhs,
+        } => execute_and(lhs, rhs),
     }
 }
 
-fn execute_status(ast: node::AST) -> Result<ExitStatus, ShellError> {
-    match ast {
-        node::AST::Command(args, output, background) => {
-            let mut cmd = Command::new(&args[0]);
-            if args.len() > 1 {
-                cmd.args(&args[1..]);
-            }
-            let stdout = if let Some((file, append)) = output {
-                let file = OpenOptions::new()
-                    .write(true)
-                    .create(true)
-                    .append(append)
-                    .open(file)
-                    .map_err(|e| ShellError::from(e))?;
-                Stdio::from(file)
-            } else {
-                Stdio::inherit()
-            };
-
-            let mut child = cmd
-                .stdin(if background {
-                    Stdio::null()
-                } else {
-                    Stdio::inherit()
-                })
-                .stdout(stdout)
-                .spawn()
-                .map_err(|e| ShellError::from(e))?;
-
-            if background {
-                Ok(ExitStatus::default())
-            } else {
-                child.wait().map_err(|e| ShellError::from(e))
-            }
-        }
-        _ => {
-            execute(ast)?;
-            Ok(ExitStatus::default())
-        }
+fn execute_command(args: &[String]) -> Result<(), ShellError> {
+    if args.is_empty() {
+        return Err(ShellError::ExpectedCommand);
     }
+
+    match args[0].as_str() {
+        "cd" => {
+            let path = if args.len() > 1 { &args[1] } else { "" };
+            bic::cd(path).map_err(|e| ShellError::BicError(e))
+        }
+        "exit" => {
+            let code = if args.len() > 1 {
+                args[1].parse().unwrap_or(0)
+            } else {
+                0
+            };
+            bic::exit(code);
+            Ok(())
+        }
+        _ => execute_external_command(args),
+    }
+}
+
+fn execute_external_command(args: &[String]) -> Result<(), ShellError> {
+    let mut command = Command::new(&args[0]);
+    if args.len() > 1 {
+        command.args(&args[1..]);
+    }
+
+    match command.status() {
+        Ok(status) => {
+            if !status.success() {
+                return Err(ShellError::CommandFailure(args[0].to_string(), status));
+            }
+            Ok(())
+        }
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            Err(ShellError::CommandNotFound(args[0].clone()))
+        }
+        Err(e) => Err(ShellError::IoError(e)),
+    }
+}
+fn execute_pipeline(lhs: &AST, rhs: &AST) -> Result<(), ShellError> {
+    let lhs_command = match lhs {
+        AST::Command(args) => args,
+        _ => {
+            return Err(ShellError::InvalidArgument(
+                "Pipeline left hand side must be a command".to_string(),
+            ))
+        }
+    };
+    let rhs_command = match rhs {
+        AST::Command(args) => args,
+        _ => {
+            return Err(ShellError::InvalidArgument(
+                "Pipeline right hand side must be a command".to_string(),
+            ))
+        }
+    };
+
+    let lhs_process = Command::new(&lhs_command[0])
+        .args(&lhs_command[1..])
+        .stdout(Stdio::piped())
+        .spawn()?;
+
+    let rhs_process = Command::new(&rhs_command[0])
+        .args(&rhs_command[1..])
+        .stdin(lhs_process.stdout.unwrap())
+        .status()?;
+
+    if !rhs_process.success() {
+        return Err(ShellError::CommandFailure(
+            rhs_command[0].to_string(),
+            rhs_process,
+        ));
+    }
+    Ok(())
+}
+
+fn execute_and(lhs: &AST, rhs: &AST) -> Result<(), ShellError> {
+    execute(lhs)?; // Execute the left-hand side
+    execute(rhs)?; // Execute the right-hand side
+    Ok(())
 }
