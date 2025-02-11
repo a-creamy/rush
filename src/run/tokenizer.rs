@@ -1,5 +1,4 @@
 use super::node::Token;
-use crate::run::node;
 
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();

@@ -1,8 +1,6 @@
-use std::io;
 
 use super::error::ShellError;
 use super::node::{Operator, Token, AST};
-use crate::run::node;
 
 pub fn parse(tokens: &[Token]) -> Result<AST, ShellError> {
     let mut tokens = tokens.iter().peekable();

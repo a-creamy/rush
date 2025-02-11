@@ -4,13 +4,16 @@ mod error;
 mod executor;
 mod node;
 mod tokenizer;
-use crate::run::error::ShellError;
+use super::run::error::ShellError;
 
 pub fn execute(input: &str) {
     let tokens = tokenizer::tokenize(input);
     let ast = ast::parse(&tokens).expect("Parsing failed");
     match executor::execute(&ast) {
         Ok(_) => (),
-        Err(e) => eprintln!("rush: {e}")
+        Err(ShellError::BicError(msg)) => {
+            eprintln!("{msg}")
+        }
+        Err(e) => eprintln!("rush: {e}"),
     }
 }
