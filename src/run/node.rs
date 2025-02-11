@@ -1,7 +1,28 @@
-use std::path::PathBuf;
+pub enum Operator {
+    Pipe,
+    And,
+}
 
 pub enum AST {
-    Command(Vec<String>, Option<(PathBuf, bool)>, bool),
-    Pipeline(Vec<Vec<String>>, Option<(PathBuf, bool)>, bool),
-    AndList(Vec<AST>),
+    Command(Vec<String>),
+
+    #[allow(dead_code)]
+    Pipeline {
+        operator: Operator,
+        lhs: Box<AST>,
+        rhs: Box<AST>,
+    },
+
+    #[allow(dead_code)]
+    AndLogical {
+        operator: Operator,
+        lhs: Box<AST>,
+        rhs: Box<AST>,
+    },
+}
+
+pub enum Token {
+    Arg(String),
+    And,
+    Pipe,
 }
