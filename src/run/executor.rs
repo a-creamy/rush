@@ -1,8 +1,6 @@
 use super::error::ShellError;
 use super::node::AST;
 use crate::run::bic;
-use crate::run::error;
-use crate::run::node;
 use std::process::{Command, Stdio};
 use std::io;
 
