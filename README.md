@@ -42,8 +42,6 @@ We welcome contributions from the community! If you would like to contribute, pl
 4. Push to the branch (`git push origin feature-branch`).
 5. Open a pull request.
 
-Please make sure to update tests as appropriate.
-
 ## License
 
 This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
