@@ -16,10 +16,7 @@ fn parse_redirection(
     while let Some(&&Token::Redirection) = tokens.peek() {
         tokens.next(); // Consume the '>'
         let right = parse_and(tokens)?;
-        left = AST::Redirection {
-            lhs: Box::new(left),
-            rhs: Box::new(right),
-        };
+        left = AST::Redirection(Box::new(left), Box::new(right));
     }
     Ok(left)
 }
@@ -29,10 +26,7 @@ fn parse_and(tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> Resul
     while let Some(&&Token::And) = tokens.peek() {
         tokens.next(); // Consume the `&&`
         let right = parse_pipe(tokens)?;
-        left = AST::AndLogical {
-            lhs: Box::new(left),
-            rhs: Box::new(right),
-        };
+        left = AST::AndLogical(Box::new(left), Box::new(right));
     }
     Ok(left)
 }
@@ -44,10 +38,7 @@ fn parse_pipe(
     while let Some(&&Token::Pipe) = tokens.peek() {
         tokens.next(); // Consume the `|`
         let right = parse_command(tokens)?;
-        left = AST::Pipeline {
-            lhs: Box::new(left),
-            rhs: Box::new(right),
-        };
+        left = AST::Pipeline(Box::new(left), Box::new(right));
     }
     Ok(left)
 }
