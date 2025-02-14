@@ -5,23 +5,20 @@ use std::fs::File;
 use std::io;
 use std::io::Write;
 use std::path::PathBuf;
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::{Command, Stdio};
 
 pub fn execute(node: &AST) -> Result<(), ShellError> {
     match node {
         AST::Command(args) => execute_command(args),
         AST::Pipeline {
-            operator: _,
             lhs,
             rhs,
         } => execute_pipeline(lhs, rhs),
         AST::AndLogical {
-            operator: _,
             lhs,
             rhs,
         } => execute_and(lhs, rhs),
         AST::Redirection {
-            operator: _,
             lhs,
             rhs,
         } => execute_redirection(lhs, rhs),
