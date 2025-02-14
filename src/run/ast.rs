@@ -1,5 +1,5 @@
 use super::error::ShellError;
-use super::node::{Operator, Token, AST};
+use super::node::{Token, AST};
 
 pub fn parse(tokens: &[Token]) -> Result<AST, ShellError> {
     let mut tokens = tokens.iter().peekable();
@@ -17,7 +17,6 @@ fn parse_redirection(
         tokens.next(); // Consume the '>'
         let right = parse_and(tokens)?;
         left = AST::Redirection {
-            operator: Operator::Redirection,
             lhs: Box::new(left),
             rhs: Box::new(right),
         };
@@ -31,7 +30,6 @@ fn parse_and(tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> Resul
         tokens.next(); // Consume the `&&`
         let right = parse_pipe(tokens)?;
         left = AST::AndLogical {
-            operator: Operator::And,
             lhs: Box::new(left),
             rhs: Box::new(right),
         };
@@ -47,7 +45,6 @@ fn parse_pipe(
         tokens.next(); // Consume the `|`
         let right = parse_command(tokens)?;
         left = AST::Pipeline {
-            operator: Operator::Pipe,
             lhs: Box::new(left),
             rhs: Box::new(right),
         };
