@@ -10,18 +10,9 @@ use std::process::{Command, Stdio};
 pub fn execute(node: &AST) -> Result<(), ShellError> {
     match node {
         AST::Command(args) => execute_command(args),
-        AST::Pipeline {
-            lhs,
-            rhs,
-        } => execute_pipeline(lhs, rhs),
-        AST::AndLogical {
-            lhs,
-            rhs,
-        } => execute_and(lhs, rhs),
-        AST::Redirection {
-            lhs,
-            rhs,
-        } => execute_redirection(lhs, rhs),
+        AST::Pipeline(lhs, rhs) => execute_pipeline(lhs, rhs),
+        AST::AndLogical(lhs, rhs) => execute_and(lhs, rhs),
+        AST::Redirection(lhs, rhs) => execute_redirection(lhs, rhs),
     }
 }
 
@@ -66,7 +57,7 @@ fn execute_redirection(lhs: &AST, rhs: &AST) -> Result<(), ShellError> {
                 file.write_all(&output.stdout)?;
                 return Ok(());
             }
-            
+
             return Err(ShellError::CommandFailure(
                 String::from_utf8_lossy(&output.stderr).to_string(),
                 output.status,
