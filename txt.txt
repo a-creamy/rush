@@ -1,0 +1,14 @@
+Cargo.lock
+Cargo.toml
+LICENSE
+README.md
+src
+target
+txt.txt
+Cargo.lock
+Cargo.toml
+LICENSE
+README.md
+src
+target
+txt.txt
