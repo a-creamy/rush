@@ -1,13 +1,28 @@
-
 use super::error::ShellError;
 use super::node::{Operator, Token, AST};
 
 pub fn parse(tokens: &[Token]) -> Result<AST, ShellError> {
     let mut tokens = tokens.iter().peekable();
-    match parse_and(&mut tokens) {
+    match parse_redirection(&mut tokens) {
         Ok(output) => return Ok(output),
         Err(_) => return Err(ShellError::ExpectedCommand),
     }
+}
+
+fn parse_redirection(
+    tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>,
+) -> Result<AST, ShellError> {
+    let mut left = parse_and(tokens)?;
+    while let Some(&&Token::Redirection) = tokens.peek() {
+        tokens.next(); // Consume the '>'
+        let right = parse_and(tokens)?;
+        left = AST::Redirection {
+            operator: Operator::Redirection,
+            lhs: Box::new(left),
+            rhs: Box::new(right),
+        };
+    }
+    Ok(left)
 }
 
 fn parse_and(tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> Result<AST, ShellError> {

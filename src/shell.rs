@@ -1,7 +1,7 @@
 use crate::run;
 use std::io::{self, stdin, stdout, Write};
 use std::str;
-mod dir;
+pub mod dir;
 
 struct Shell {
     prompt: String,
