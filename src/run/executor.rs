@@ -1,7 +1,7 @@
 use super::error::ShellError;
 use super::node::AST;
 use crate::run::bic;
-use std::fs::File;
+use std::fs::{OpenOptions, File};
 use std::io;
 use std::io::Write;
 use std::path::PathBuf;
@@ -12,16 +12,17 @@ pub fn execute(node: &AST) -> Result<(), ShellError> {
         AST::Command(args) => execute_command(args),
         AST::Pipeline(lhs, rhs) => execute_pipeline(lhs, rhs),
         AST::AndLogical(lhs, rhs) => execute_and(lhs, rhs),
-        AST::Redirection(lhs, rhs) => execute_redirection(lhs, rhs),
+        AST::OverwriteRedirection(lhs, rhs) => execute_redirection(lhs, rhs, true),
+        AST::AppendRedirection(lhs, rhs) => execute_redirection(lhs, rhs, false),
     }
 }
 
-fn execute_redirection(lhs: &AST, rhs: &AST) -> Result<(), ShellError> {
+fn execute_redirection(lhs: &AST, rhs: &AST, overwrite: bool) -> Result<(), ShellError> {
     let filepath = match rhs {
         AST::Command(args) => PathBuf::from(&args[0]),
         _ => {
             return Err(ShellError::InvalidArgument(
-                "Expected a filepath for '>'".to_string(),
+                "Expected a filepath".to_string(),
             ));
         }
     };
@@ -30,7 +31,7 @@ fn execute_redirection(lhs: &AST, rhs: &AST) -> Result<(), ShellError> {
         AST::Command(cmd) => cmd,
         _ => {
             return Err(ShellError::InvalidArgument(
-                "Expected a command for '>'".to_string(),
+                "Expected a command for redirection".to_string(),
             ));
         }
     };
@@ -53,7 +54,15 @@ fn execute_redirection(lhs: &AST, rhs: &AST) -> Result<(), ShellError> {
             let output = Command::new(&args[0]).args(&args[1..]).output()?;
 
             if output.status.success() {
-                let mut file = File::create(filepath)?;
+                let mut file = if !overwrite {
+                    OpenOptions::new()
+                        .append(true)
+                        .create(true)
+                        .open(filepath)?
+                } else {
+                    File::create(filepath)?
+                };
+
                 file.write_all(&output.stdout)?;
                 return Ok(());
             }

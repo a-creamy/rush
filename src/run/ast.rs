@@ -3,20 +3,32 @@ use super::node::{Token, AST};
 
 pub fn parse(tokens: &[Token]) -> Result<AST, ShellError> {
     let mut tokens = tokens.iter().peekable();
-    match parse_redirection(&mut tokens) {
+    match parse_append(&mut tokens) {
         Ok(output) => return Ok(output),
-        Err(_) => return Err(ShellError::ExpectedCommand),
+        Err(e) => return Err(e),
     }
+}
+
+fn parse_append(
+    tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>
+) -> Result<AST, ShellError> {
+    let mut left = parse_redirection(tokens)?;
+    while let Some(&&Token::AppendRedirection) = tokens.peek() {
+        tokens.next(); // Consume the '>>'
+        let right = parse_redirection(tokens)?;
+        left = AST::AppendRedirection(Box::new(left), Box::new(right));
+    }
+    Ok(left)
 }
 
 fn parse_redirection(
     tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>,
 ) -> Result<AST, ShellError> {
     let mut left = parse_and(tokens)?;
-    while let Some(&&Token::Redirection) = tokens.peek() {
+    while let Some(&&Token::OverwriteRedirection) = tokens.peek() {
         tokens.next(); // Consume the '>'
         let right = parse_and(tokens)?;
-        left = AST::Redirection(Box::new(left), Box::new(right));
+        left = AST::OverwriteRedirection(Box::new(left), Box::new(right));
     }
     Ok(left)
 }
