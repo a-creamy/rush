@@ -1,6 +1,7 @@
 pub enum Operator {
     Pipe,
     And,
+    Redirection,
 }
 
 pub enum AST {
@@ -19,10 +20,17 @@ pub enum AST {
         lhs: Box<AST>,
         rhs: Box<AST>,
     },
+
+    Redirection {
+        operator: Operator,
+        lhs: Box<AST>,
+        rhs: Box<AST>,
+    }
 }
 
 pub enum Token {
     Arg(String),
     And,
     Pipe,
+    Redirection,
 }

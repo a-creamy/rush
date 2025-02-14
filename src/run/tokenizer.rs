@@ -6,6 +6,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         match part {
             "|" => tokens.push(Token::Pipe),
             "&&" => tokens.push(Token::And),
+            ">" => tokens.push(Token::Redirection),
             arg => tokens.push(Token::Arg(arg.to_string())),
         }
     }
