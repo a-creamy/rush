@@ -11,5 +11,5 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             arg => tokens.push(Token::Arg(arg.to_string())),
         }
     }
-    return tokens;
+    tokens
 }

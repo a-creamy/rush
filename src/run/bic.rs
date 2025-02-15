@@ -9,7 +9,7 @@ pub fn cd(arg: &str) -> Result<(), String> {
     };
 
     let path = Path::new(&new_path);
-    match env::set_current_dir(&path) {
+    match env::set_current_dir(path) {
         Ok(()) => Ok(()),
         Err(_) => Err(format!("cd: The directory '{}' does not exist", path.display())),
     }

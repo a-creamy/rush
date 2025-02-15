@@ -1,9 +1,9 @@
-pub enum AST {
+pub enum Ast {
     Command(Vec<String>),
-    Pipeline(Box<AST>, Box<AST>),
-    AndLogical(Box<AST>, Box<AST>),
-    OverwriteRedirection(Box<AST>, Box<AST>),
-    AppendRedirection(Box<AST>, Box<AST>),
+    Pipeline(Box<Ast>, Box<Ast>),
+    AndLogical(Box<Ast>, Box<Ast>),
+    OverwriteRedirection(Box<Ast>, Box<Ast>),
+    AppendRedirection(Box<Ast>, Box<Ast>),
 }
 
 pub enum Token {

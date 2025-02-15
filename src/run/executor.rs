@@ -1,5 +1,5 @@
 use super::error::ShellError;
-use super::node::AST;
+use super::node::Ast;
 use crate::run::bic;
 use std::fs::{OpenOptions, File};
 use std::io;
@@ -7,19 +7,19 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-pub fn execute(node: &AST) -> Result<(), ShellError> {
+pub fn execute(node: &Ast) -> Result<(), ShellError> {
     match node {
-        AST::Command(args) => execute_command(args),
-        AST::Pipeline(lhs, rhs) => execute_pipeline(lhs, rhs),
-        AST::AndLogical(lhs, rhs) => execute_and(lhs, rhs),
-        AST::OverwriteRedirection(lhs, rhs) => execute_redirection(lhs, rhs, true),
-        AST::AppendRedirection(lhs, rhs) => execute_redirection(lhs, rhs, false),
+        Ast::Command(args) => execute_command(args),
+        Ast::Pipeline(lhs, rhs) => execute_pipeline(lhs, rhs),
+        Ast::AndLogical(lhs, rhs) => execute_and(lhs, rhs),
+        Ast::OverwriteRedirection(lhs, rhs) => execute_redirection(lhs, rhs, true),
+        Ast::AppendRedirection(lhs, rhs) => execute_redirection(lhs, rhs, false),
     }
 }
 
-fn execute_redirection(lhs: &AST, rhs: &AST, overwrite: bool) -> Result<(), ShellError> {
+fn execute_redirection(lhs: &Ast, rhs: &Ast, overwrite: bool) -> Result<(), ShellError> {
     let filepath = match rhs {
-        AST::Command(args) => PathBuf::from(&args[0]),
+        Ast::Command(args) => PathBuf::from(&args[0]),
         _ => {
             return Err(ShellError::InvalidArgument(
                 "Expected a filepath".to_string(),
@@ -28,7 +28,7 @@ fn execute_redirection(lhs: &AST, rhs: &AST, overwrite: bool) -> Result<(), Shel
     };
 
     let args = match lhs {
-        AST::Command(cmd) => cmd,
+        Ast::Command(cmd) => cmd,
         _ => {
             return Err(ShellError::InvalidArgument(
                 "Expected a command for redirection".to_string(),
@@ -39,7 +39,7 @@ fn execute_redirection(lhs: &AST, rhs: &AST, overwrite: bool) -> Result<(), Shel
     match args[0].as_str() {
         "cd" => {
             let path = if args.len() > 1 { &args[1] } else { "" };
-            bic::cd(path).map_err(|e| ShellError::BicError(e))
+            bic::cd(path).map_err(ShellError::BicError)
         }
         "exit" => {
             let code = if args.len() > 1 {
@@ -67,10 +67,10 @@ fn execute_redirection(lhs: &AST, rhs: &AST, overwrite: bool) -> Result<(), Shel
                 return Ok(());
             }
 
-            return Err(ShellError::CommandFailure(
+            Err(ShellError::CommandFailure(
                 String::from_utf8_lossy(&output.stderr).to_string(),
                 output.status,
-            ));
+            ))
         }
     }
 }
@@ -83,7 +83,7 @@ fn execute_command(args: &[String]) -> Result<(), ShellError> {
     match args[0].as_str() {
         "cd" => {
             let path = if args.len() > 1 { &args[1] } else { "" };
-            bic::cd(path).map_err(|e| ShellError::BicError(e))
+            bic::cd(path).map_err(ShellError::BicError)
         }
         "exit" => {
             let code = if args.len() > 1 {
@@ -117,9 +117,9 @@ fn execute_external_command(args: &[String]) -> Result<(), ShellError> {
         Err(e) => Err(ShellError::IoError(e)),
     }
 }
-fn execute_pipeline(lhs: &AST, rhs: &AST) -> Result<(), ShellError> {
+fn execute_pipeline(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
     let lhs_command = match lhs {
-        AST::Command(args) => args,
+        Ast::Command(args) => args,
         _ => {
             return Err(ShellError::InvalidArgument(
                 "Pipeline left hand side must be a command".to_string(),
@@ -127,7 +127,7 @@ fn execute_pipeline(lhs: &AST, rhs: &AST) -> Result<(), ShellError> {
         }
     };
     let rhs_command = match rhs {
-        AST::Command(args) => args,
+        Ast::Command(args) => args,
         _ => {
             return Err(ShellError::InvalidArgument(
                 "Pipeline right hand side must be a command".to_string(),
@@ -154,7 +154,7 @@ fn execute_pipeline(lhs: &AST, rhs: &AST) -> Result<(), ShellError> {
     Ok(())
 }
 
-fn execute_and(lhs: &AST, rhs: &AST) -> Result<(), ShellError> {
+fn execute_and(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
     execute(lhs)?; // Execute the left-hand side
     execute(rhs)?; // Execute the right-hand side
     Ok(())
