@@ -5,7 +5,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     for part in input.split_whitespace() {
         match part {
             "|" => tokens.push(Token::Pipe),
-            "&&" => tokens.push(Token::And),
+            "&&" => tokens.push(Token::AndLogical),
+            "||" => tokens.push(Token::OrLogical),
             ">" => tokens.push(Token::OverwriteRedirection),
             ">>" => tokens.push(Token::AppendRedirection),
             "2>" => tokens.push(Token::ErrorRedirection),
