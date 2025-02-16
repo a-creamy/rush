@@ -1,6 +1,5 @@
 use crate::run::{bic, ShellError};
-use std::process::Command;
-use std::io;
+use std::{io, process::Command};
 
 pub fn execute(args: &[String]) -> Result<(), ShellError> {
     if args.is_empty() {

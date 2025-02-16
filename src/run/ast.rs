@@ -1,5 +1,4 @@
-use super::error::ShellError;
-use super::node::{Token, Ast};
+use super::{error::ShellError, node::{Ast, Token}};
 
 pub fn parse(tokens: &[Token]) -> Result<Ast, ShellError> {
     let mut tokens = tokens.iter().peekable();
