@@ -1,5 +1,4 @@
-use std::env;
-use std::path::Path;
+use std::{env, path::Path};
 
 pub fn cd(arg: &str) -> Result<(), String> {
     let new_path = if arg.is_empty() || arg == "~" {

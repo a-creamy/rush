@@ -1,6 +1,5 @@
-use crate::run::node::Ast;
 use std::process::{Command, Stdio};
-use crate::run::ShellError;
+use crate::run::{ShellError, node::Ast};
 
 pub fn execute(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
     let lhs_command = match lhs {
