@@ -4,6 +4,7 @@ pub enum Ast {
     AndLogical(Box<Ast>, Box<Ast>),
     OverwriteRedirection(Box<Ast>, Box<Ast>),
     AppendRedirection(Box<Ast>, Box<Ast>),
+    ErrorRedirection(Box<Ast>, Box<Ast>),
 }
 
 pub enum Token {
@@ -12,4 +13,5 @@ pub enum Token {
     Pipe,
     OverwriteRedirection,
     AppendRedirection,
+    ErrorRedirection,
 }
