@@ -1,5 +1,4 @@
-use std::io;
-use std::process::ExitStatus;
+use std::{io, process::ExitStatus};
 
 #[derive(Debug)]
 pub enum ShellError {

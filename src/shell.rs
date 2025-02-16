@@ -1,6 +1,5 @@
 use crate::run;
-use std::io::{self, stdin, stdout, Write};
-use std::str;
+use std::{io::{self, stdin, stdout, Write}, str};
 mod dir;
 
 struct Shell {

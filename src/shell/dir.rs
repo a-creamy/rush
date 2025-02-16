@@ -1,8 +1,5 @@
 use libc::{getpwuid, getuid};
-use std::env;
-use std::ffi::CStr;
-use std::io::{self, Error, ErrorKind};
-use std::path::PathBuf;
+use std::{env, ffi::CStr, io::{self, Error, ErrorKind}, path::PathBuf};
 
 pub fn home_dir() -> io::Result<String> {
     unsafe {

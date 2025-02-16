@@ -1,5 +1,4 @@
-use crate::run::{executor, node::Ast};
-use crate::run::ShellError;
+use crate::run::{executor, node::Ast, ShellError};
 
 pub fn execute(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
     executor::execute(lhs)?;
