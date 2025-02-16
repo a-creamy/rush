@@ -2,7 +2,19 @@ use super::{error::ShellError, node::{Ast, Token}};
 
 pub fn parse(tokens: &[Token]) -> Result<Ast, ShellError> {
     let mut tokens = tokens.iter().peekable();
-    parse_error_redirection(&mut tokens)
+    parse_or_logical(&mut tokens)
+}
+
+fn parse_or_logical(
+    tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>,
+) -> Result<Ast, ShellError> {
+    let mut left = parse_error_redirection(tokens)?;
+    while let Some(&&Token::OrLogical) = tokens.peek() {
+        tokens.next(); // Consume the `||`
+        let right = parse_error_redirection(tokens)?;
+        left = Ast::OrLogical(Box::new(left), Box::new(right));
+    }
+    Ok(left)
 }
 
 fn parse_error_redirection(
@@ -43,7 +55,7 @@ fn parse_redirection(
 
 fn parse_and(tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> Result<Ast, ShellError> {
     let mut left = parse_pipe(tokens)?;
-    while let Some(&&Token::And) = tokens.peek() {
+    while let Some(&&Token::AndLogical) = tokens.peek() {
         tokens.next(); // Consume the `&&`
         let right = parse_pipe(tokens)?;
         left = Ast::AndLogical(Box::new(left), Box::new(right));
@@ -58,7 +70,7 @@ fn parse_pipe(
     while let Some(&&Token::Pipe) = tokens.peek() {
         tokens.next(); // Consume the `|`
         let right = parse_command(tokens)?;
-        left = Ast::Pipeline(Box::new(left), Box::new(right));
+        left = Ast::Pipe(Box::new(left), Box::new(right));
     }
     Ok(left)
 }
