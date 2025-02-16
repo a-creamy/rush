@@ -3,7 +3,19 @@ use super::node::{Token, Ast};
 
 pub fn parse(tokens: &[Token]) -> Result<Ast, ShellError> {
     let mut tokens = tokens.iter().peekable();
-    parse_append(&mut tokens)
+    parse_error_redirection(&mut tokens)
+}
+
+fn parse_error_redirection(
+    tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>,
+) -> Result<Ast, ShellError> {
+    let mut left = parse_append(tokens)?;
+    while let Some(&&Token::ErrorRedirection) = tokens.peek() {
+        tokens.next(); // Consume the '2>'
+        let right = parse_append(tokens)?;
+        left = Ast::ErrorRedirection(Box::new(left), Box::new(right));
+    }
+    Ok(left)
 }
 
 fn parse_append(
