@@ -30,3 +30,9 @@ impl From<io::Error> for ShellError {
         ShellError::IoError(error)
     }
 }
+
+impl From<()> for ShellError {
+    fn from(_: ()) -> Self {
+        ShellError::ExpectedCommand
+    }
+}

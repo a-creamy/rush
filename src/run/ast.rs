@@ -2,47 +2,90 @@ use super::{error::ShellError, node::{Ast, Token}};
 
 pub fn parse(tokens: &[Token]) -> Result<Ast, ShellError> {
     let mut tokens = tokens.iter().peekable();
-    parse_or_logical(&mut tokens)
+    parse_background(&mut tokens)
 }
 
-fn parse_or_logical(
+fn parse_background(
     tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>,
 ) -> Result<Ast, ShellError> {
-    let mut left = parse_and(tokens)?;
+    let mut node = parse_logical(tokens)?;
+
+    if let Some(&&Token::Background) = tokens.peek() {
+        tokens.next(); // Consume the `&`
+        node = Ast::Background(Box::new(node));
+    }
+
+    Ok(node)
+}
+
+fn parse_logical(
+    tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>,
+) -> Result<Ast, ShellError> {
+    let mut node = parse_pipes(tokens)?;
+
     while let Some(&&Token::OrLogical) = tokens.peek() {
-        tokens.next(); // Consume the `||`
-        let right = parse_and(tokens)?;
-        left = Ast::OrLogical(Box::new(left), Box::new(right));
+        tokens.next(); // Consume `||`
+        let rhs = parse_pipes(tokens)?;
+        node = Ast::OrLogical(Box::new(node), Box::new(rhs));
     }
-    Ok(left)
-}
 
-fn parse_and(tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> Result<Ast, ShellError> {
-    let mut left = parse_pipe(tokens)?;
     while let Some(&&Token::AndLogical) = tokens.peek() {
-        tokens.next(); // Consume the `&&`
-        let right = parse_pipe(tokens)?;
-        left = Ast::AndLogical(Box::new(left), Box::new(right));
+        tokens.next(); // Consume `&&`
+        let rhs = parse_pipes(tokens)?;
+        node = Ast::AndLogical(Box::new(node), Box::new(rhs));
     }
-    Ok(left)
+
+    Ok(node)
 }
 
-fn parse_pipe(
+fn parse_pipes(
     tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>,
 ) -> Result<Ast, ShellError> {
-    let mut left = parse_command(tokens)?;
+    let mut node = parse_redirections(tokens)?;
+
     while let Some(&&Token::Pipe) = tokens.peek() {
-        tokens.next(); // Consume the `|`
-        let right = parse_command(tokens)?;
-        left = Ast::Pipe(Box::new(left), Box::new(right));
+        tokens.next(); // Consume `|`
+        let rhs = parse_redirections(tokens)?;
+        node = Ast::Pipe(Box::new(node), Box::new(rhs));
     }
-    Ok(left)
+
+    Ok(node)
 }
 
-fn parse_command(
+fn parse_redirections(
+    tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>,
+) -> Result<Ast, ShellError> {
+    let mut node = parse_commands(tokens)?;
+
+    while let Some(&token) = tokens.peek() {
+        match token {
+            Token::OverwriteRedirection => {
+                tokens.next(); // Consume `>`
+                let rhs = parse_commands(tokens)?;
+                node = Ast::OverwriteRedirection(Box::new(node), Box::new(rhs));
+            }
+            Token::AppendRedirection => {
+                tokens.next(); // Consume `>>`
+                let rhs = parse_commands(tokens)?;
+                node = Ast::AppendRedirection(Box::new(node), Box::new(rhs));
+            }
+            Token::ErrorRedirection => {
+                tokens.next(); // Consume `2>`
+                let rhs = parse_commands(tokens)?;
+                node = Ast::ErrorRedirection(Box::new(node), Box::new(rhs));
+            }
+            _ => break, // No more redirections
+        }
+    }
+
+    Ok(node)
+}
+
+fn parse_commands(
     tokens: &mut std::iter::Peekable<std::slice::Iter<Token>>,
 ) -> Result<Ast, ShellError> {
     let mut args = Vec::new();
+
     while let Some(&Token::Arg(arg)) = tokens.peek() {
         args.push(arg.clone());
         tokens.next();
@@ -52,29 +95,5 @@ fn parse_command(
         return Err(ShellError::ExpectedCommand);
     }
 
-    let mut command = Ast::Command(args);
-
-    // Handle redirections at the command level
-    while let Some(&token) = tokens.peek() {
-        match token {
-            Token::OverwriteRedirection => {
-                tokens.next(); // Consume '>'
-                let right = parse_command(tokens)?;
-                command = Ast::OverwriteRedirection(Box::new(command), Box::new(right));
-            }
-            Token::AppendRedirection => {
-                tokens.next(); // Consume '>>'
-                let right = parse_command(tokens)?;
-                command = Ast::AppendRedirection(Box::new(command), Box::new(right));
-            }
-            Token::ErrorRedirection => {
-                tokens.next(); // Consume '2>'
-                let right = parse_command(tokens)?;
-                command = Ast::ErrorRedirection(Box::new(command), Box::new(right));
-            }
-            _ => break,
-        }
-    }
-
-    Ok(command)
+    Ok(Ast::Command(args))
 }
