@@ -18,6 +18,16 @@ pub fn execute(node: &Ast) -> Result<(), ShellError> {
     }
 }
 
+fn log_error(filepath: &PathBuf, output: &str) -> Result<(), ShellError> {
+    let mut file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(filepath)?;
+
+    file.write_all(output.as_bytes())?;
+    Ok(())
+}
+
 fn execute_error_redirection(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
     let filepath = match rhs {
         Ast::Command(args) => PathBuf::from(&args[0]),
@@ -40,7 +50,13 @@ fn execute_error_redirection(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
     match args[0].as_str() {
         "cd" => {
             let path = if args.len() > 1 { &args[1] } else { "" };
-            bic::cd(path).map_err(ShellError::BicError)
+            match bic::cd(path) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    log_error(&filepath, &e.to_string())?;
+                    Ok(())
+                }
+            }
         }
         "exit" => {
             let code = if args.len() > 1 {

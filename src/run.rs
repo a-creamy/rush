@@ -12,7 +12,7 @@ pub fn execute(input: &str) {
     match executor::execute(&ast) {
         Ok(_) => (),
         Err(ShellError::BicError(msg)) => {
-            eprintln!("{msg}")
+            eprint!("{msg}")
         }
         Err(e) => eprintln!("rush: {e}"),
     }
