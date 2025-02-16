@@ -1,7 +1,7 @@
 use super::error::ShellError;
 use super::node::Ast;
 use crate::run::bic;
-use std::fs::{OpenOptions, File};
+use std::fs::{File, OpenOptions};
 use std::io;
 use std::io::Write;
 use std::path::PathBuf;
@@ -14,6 +14,57 @@ pub fn execute(node: &Ast) -> Result<(), ShellError> {
         Ast::AndLogical(lhs, rhs) => execute_and(lhs, rhs),
         Ast::OverwriteRedirection(lhs, rhs) => execute_redirection(lhs, rhs, true),
         Ast::AppendRedirection(lhs, rhs) => execute_redirection(lhs, rhs, false),
+        Ast::ErrorRedirection(lhs, rhs) => execute_error_redirection(lhs, rhs),
+    }
+}
+
+fn execute_error_redirection(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
+    let filepath = match rhs {
+        Ast::Command(args) => PathBuf::from(&args[0]),
+        _ => {
+            return Err(ShellError::InvalidArgument(
+                "Expected a filepath".to_string(),
+            ));
+        }
+    };
+
+    let args = match lhs {
+        Ast::Command(cmd) => cmd,
+        _ => {
+            return Err(ShellError::InvalidArgument(
+                "Expected a command for redirection".to_string(),
+            ));
+        }
+    };
+
+    match args[0].as_str() {
+        "cd" => {
+            let path = if args.len() > 1 { &args[1] } else { "" };
+            bic::cd(path).map_err(ShellError::BicError)
+        }
+        "exit" => {
+            let code = if args.len() > 1 {
+                args[1].parse().unwrap_or(0)
+            } else {
+                0
+            };
+            bic::exit(code);
+            Ok(())
+        }
+        _ => {
+            let output = Command::new(&args[0])
+                .args(&args[1..])
+                .stderr(Stdio::piped())
+                .output()?;
+
+            let mut file = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(filepath)?;
+
+            file.write_all(&output.stderr)?;
+            Ok(())
+        }
     }
 }
 
@@ -155,7 +206,7 @@ fn execute_pipeline(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
 }
 
 fn execute_and(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
-    execute(lhs)?; // Execute the left-hand side
-    execute(rhs)?; // Execute the right-hand side
+    execute(lhs)?;
+    execute(rhs)?;
     Ok(())
 }
