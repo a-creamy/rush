@@ -20,28 +20,24 @@ pub fn execute(args: &[String]) -> Result<(), ShellError> {
             bic::exit(code);
             Ok(())
         }
-        _ => external_command(args),
-    }
-}
-
-fn external_command(args: &[String]) -> Result<(), ShellError> {
-    let mut command = Command::new(&args[0]);
-    if args.len() > 1 {
-        command.args(&args[1..]);
-    }
-
-    match command.status() {
-        Ok(status) => {
-            if !status.success() {
-                return Err(ShellError::CommandFailure(args[0].to_string(), status));
+        _ => {
+            let mut command = Command::new(&args[0]);
+            if args.len() > 1 {
+                command.args(&args[1..]);
             }
-            Ok(())
+
+            match command.status() {
+                Ok(status) => {
+                    if !status.success() {
+                        return Err(ShellError::CommandFailure(args[0].to_string(), status));
+                    }
+                    Ok(())
+                }
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    Err(ShellError::CommandNotFound(args[0].clone()))
+                }
+                Err(e) => Err(ShellError::IoError(e)),
+            }
         }
-        Err(e) if e.kind() == io::ErrorKind::NotFound => {
-            Err(ShellError::CommandNotFound(args[0].clone()))
-        }
-        Err(e) => Err(ShellError::IoError(e)),
     }
 }
-
-

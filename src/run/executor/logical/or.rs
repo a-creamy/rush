@@ -6,7 +6,7 @@ pub fn execute(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
         Ast::Command(args) => args,
         _ => {
             return Err(ShellError::InvalidArgument(
-                "Or logical right hand side must be a command".to_string(),
+                "Or logical left hand side must be a command".to_string(),
             ))
         }
     };
