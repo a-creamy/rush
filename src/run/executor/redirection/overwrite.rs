@@ -38,9 +38,7 @@ pub fn execute(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
             let output = Command::new(&args[0]).args(&args[1..]).output()?;
 
             if output.status.success() {
-                let mut file = File::create(filepath)?;
-
-                file.write_all(&output.stdout)?;
+                File::create(filepath)?.write_all(&output.stdout)?;
                 return Ok(());
             }
 
