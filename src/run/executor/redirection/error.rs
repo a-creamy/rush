@@ -1,9 +1,10 @@
 use crate::run::{bic, error::ShellError, node::Ast};
 use std::{
+    fs::OpenOptions,
+    io::Write,
     path::PathBuf,
     process::{Command, Stdio},
 };
-mod utils;
 
 pub fn execute(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
     let filepath = match rhs {
@@ -30,7 +31,12 @@ pub fn execute(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
             match bic::cd(path) {
                 Ok(_) => Ok(()),
                 Err(e) => {
-                    utils::log_error(&filepath, &e.to_string())?;
+                    OpenOptions::new()
+                        .append(true)
+                        .create(true)
+                        .open(filepath)?
+                        .write_all(e.to_string().as_bytes())?;
+
                     Ok(())
                 }
             }
@@ -50,7 +56,12 @@ pub fn execute(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
                 .stderr(Stdio::piped())
                 .output()?;
 
-            utils::log_error(&filepath, &String::from_utf8_lossy(&output.stderr))?;
+            OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(filepath)?
+                .write_all(&output.stdout)?;
+
             Ok(())
         }
     }

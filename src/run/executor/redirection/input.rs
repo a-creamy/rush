@@ -23,10 +23,11 @@ pub fn execute(lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
         }
     };
 
-    let mut binding = Command::new(args[0].clone());
-    let cmd = binding.args(&args[1..]);
-
-    cmd.stdin(Stdio::from(file)).spawn()?.wait()?;
+    Command::new(args[0].clone())
+        .args(&args[1..])
+        .stdin(Stdio::from(file))
+        .spawn()?
+        .wait()?;
 
     Ok(())
 }
