@@ -1,4 +1,4 @@
-mod ast;
+mod parser;
 mod bic;
 mod error;
 mod executor;
@@ -8,7 +8,7 @@ use super::run::error::ShellError;
 
 pub fn execute(input: &str) {
     let tokens = tokenizer::tokenize(input);
-    let ast = ast::parse(&tokens).expect("Parsing failed");
+    let ast = parser::parse(&tokens).expect("Parsing failed");
     match executor::execute(&ast) {
         Ok(_) => (),
         Err(ShellError::BicError(msg)) => {
