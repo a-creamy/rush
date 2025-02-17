@@ -15,6 +15,7 @@ pub enum RedirectionType {
 
 pub fn execute(lhs: &Ast, rhs: &Ast, redirection_type: RedirectionType) -> Result<(), ShellError> {
     match redirection_type {
+        RedirectionType::Output => output::execute(lhs, rhs),
         RedirectionType::Input => input::execute(lhs, rhs),
         RedirectionType::Overwrite => overwrite::execute(lhs, rhs),
         RedirectionType::Append => append::execute(lhs, rhs),
