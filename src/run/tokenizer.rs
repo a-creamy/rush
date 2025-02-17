@@ -8,6 +8,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             "&&" => tokens.push(Token::AndLogical),
             "||" => tokens.push(Token::OrLogical),
             "&" => tokens.push(Token::Background),
+            "&>" => tokens.push(Token::OutputRedirection),
             "<" => tokens.push(Token::InputRedirection),
             ">" => tokens.push(Token::OverwriteRedirection),
             ">>" => tokens.push(Token::AppendRedirection),

@@ -3,8 +3,10 @@ mod overwrite;
 mod error;
 mod append;
 mod input;
+mod output;
 
 pub enum RedirectionType {
+    Output,
     Input,
     Overwrite,
     Append,
