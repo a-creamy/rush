@@ -7,6 +7,7 @@ mod command;
 mod redirection;
 mod logical;
 mod background;
+mod separator;
 
 pub fn execute(node: &Ast) -> Result<(), ShellError> {
     match node {
@@ -15,6 +16,7 @@ pub fn execute(node: &Ast) -> Result<(), ShellError> {
         Ast::AndLogical(lhs, rhs) => logical::execute(lhs, rhs, LogicalType::And),
         Ast::OrLogical(lhs, rhs) => logical::execute(lhs, rhs, LogicalType::Or),
         Ast::Background(node) => background::execute(node),
+        Ast::Separator(lhs, rhs) => separator::execute(lhs, rhs),
         Ast::OutputRedirection(lhs, rhs) => redirection::execute(lhs, rhs, RedirectionType::Output),
         Ast::InputRedirection(lhs, rhs) => redirection::execute(lhs, rhs, RedirectionType::Input),
         Ast::OverwriteRedirection(lhs, rhs) => redirection::execute(lhs, rhs, RedirectionType::Overwrite),
