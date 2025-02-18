@@ -3,7 +3,7 @@ use std::{io, process::Command};
 
 pub fn execute(args: &[String]) -> Result<(), ShellError> {
     if args.is_empty() {
-        return Err(ShellError::ExpectedCommand);
+        return Ok(());
     }
 
     match args[0].as_str() {

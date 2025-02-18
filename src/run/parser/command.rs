@@ -10,9 +10,5 @@ pub fn parse(
         tokens.next();
     }
 
-    if args.is_empty() {
-        return Err(ShellError::ExpectedCommand);
-    }
-
     Ok(Ast::Command(args))
 }

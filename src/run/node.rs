@@ -3,7 +3,7 @@ pub enum Ast {
     Pipe(Box<Ast>, Box<Ast>),
     AndLogical(Box<Ast>, Box<Ast>),
     OrLogical(Box<Ast>, Box<Ast>),
-    Background(Box<Ast>),
+    Background(Box<Ast>, Box<Ast>),
     OutputRedirection(Box<Ast>, Box<Ast>),
     InputRedirection(Box<Ast>, Box<Ast>),
     OverwriteRedirection(Box<Ast>, Box<Ast>),

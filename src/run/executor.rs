@@ -14,7 +14,7 @@ pub fn execute(node: &Ast) -> Result<(), ShellError> {
         Ast::Pipe(lhs, rhs) => pipe::execute(lhs, rhs),
         Ast::AndLogical(lhs, rhs) => logical::execute(lhs, rhs, LogicalType::And),
         Ast::OrLogical(lhs, rhs) => logical::execute(lhs, rhs, LogicalType::Or),
-        Ast::Background(node) => background::execute(node),
+        Ast::Background(lhs, rhs) => background::execute(lhs, rhs),
         Ast::OutputRedirection(lhs, rhs) => redirection::execute(lhs, rhs, RedirectionType::Output),
         Ast::InputRedirection(lhs, rhs) => redirection::execute(lhs, rhs, RedirectionType::Input),
         Ast::OverwriteRedirection(lhs, rhs) => redirection::execute(lhs, rhs, RedirectionType::Overwrite),
