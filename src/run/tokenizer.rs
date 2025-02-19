@@ -12,6 +12,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             
             "|" => tokens.push(Token::Pipe),
             "&" => tokens.push(Token::Background),
+            ";" => tokens.push(Token::Separator),
             "<" => tokens.push(Token::InputRedirection),
             ">" => tokens.push(Token::OverwriteRedirection),
             

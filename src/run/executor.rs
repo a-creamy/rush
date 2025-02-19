@@ -3,6 +3,7 @@ mod command;
 mod logical;
 mod pipe;
 mod redirection;
+mod separator;
 
 use super::{error::ShellError, node::Ast};
 use logical::LogicalType;
@@ -13,6 +14,7 @@ pub fn execute(node: &Ast) -> Result<(), ShellError> {
         Ast::Command(args) => command::execute(args),
         Ast::Pipe(lhs, rhs) => pipe::execute(lhs, rhs),
         Ast::Background(lhs, rhs) => background::execute(lhs, rhs),
+        Ast::Separator(lhs, rhs) => separator::execute(lhs, rhs),
         Ast::AndLogical(lhs, rhs) => logical::execute(lhs, rhs, LogicalType::And),
         Ast::OrLogical(lhs, rhs) => logical::execute(lhs, rhs, LogicalType::Or),
         Ast::InputRedirection(lhs, rhs) => redirection::execute(lhs, rhs, RedirectionType::Input),

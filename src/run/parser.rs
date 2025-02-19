@@ -4,7 +4,8 @@ mod background;
 mod logical;
 mod pipe;
 mod redirection;
+mod separator;
 
 pub fn parse(tokens: &[Token]) -> Result<Ast, ShellError> {
-    background::parse(&mut tokens.iter().peekable())
+    separator::parse(&mut tokens.iter().peekable())
 }
