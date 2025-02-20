@@ -1,4 +1,4 @@
-use crate::run;
+use crate::{run, terminal::TERMINAL};
 use std::{io::{self, stdin, stdout, Write}, str};
 mod dir;
 
@@ -46,5 +46,11 @@ pub fn run() {
             Ok(input) => run::execute(input.as_str()),
             Err(e) => eprintln!("{e}"),
         }
+        let mut terminal = TERMINAL.lock().unwrap();
+        if !terminal.print.is_empty() {
+            print!("{}", terminal.print);
+            stdout().flush().unwrap();
+        }
+        terminal.print.clear();
     }
 }
