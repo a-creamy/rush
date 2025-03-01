@@ -32,6 +32,7 @@ impl<'a> Tokenizer<'a> {
                     } else {
                         tokens.push(Token::Pipe);
                     }
+                    self.advance();
                 }
                 '&' => {
                     self.advance();
