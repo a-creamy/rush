@@ -92,7 +92,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn get_precedence(token: &Token) -> u8 {
+    fn get_precedence(token: &Token) -> u8 {
         match token {
             Token::Background => 10,
             Token::Logic(_) => 20,
