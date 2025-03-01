@@ -1,4 +1,4 @@
-use super::node::{RedirectType, Token, LogicType};
+use super::node::{LogicType, RedirectType, Token};
 use std::str::Chars;
 
 pub struct Tokenizer<'a> {
@@ -16,7 +16,7 @@ impl<'a> Tokenizer<'a> {
         tokenizer
     }
 
-    pub fn advance(&mut self) {
+    fn advance(&mut self) {
         self.current_char = self.input.next();
     }
 
@@ -25,6 +25,7 @@ impl<'a> Tokenizer<'a> {
 
         while let Some(c) = self.current_char {
             match c {
+                ' ' | '\t' | '\n' => self.advance(),
                 '|' => {
                     self.advance();
                     if self.current_char == Some('|') {
@@ -58,7 +59,6 @@ impl<'a> Tokenizer<'a> {
                     self.advance();
                     tokens.push(Token::Redirect(RedirectType::Input));
                 }
-                ' ' | '\t' | '\n' => self.advance(),
                 _ => {
                     let mut arg = String::new();
 
