@@ -4,9 +4,14 @@ pub enum Ast {
     Command(Vec<String>),
     Pipe(Box<Ast>, Box<Ast>),
     Background(Box<Ast>, Box<Ast>),
-    AndLogical(Box<Ast>, Box<Ast>),
-    OrLogical(Box<Ast>, Box<Ast>),
+    Logic(Box<Ast>, Box<Ast>, LogicType),
     Redirect(Box<Ast>, Box<Ast>, RedirectType),
+}
+
+#[derive(Debug, Clone)]
+pub enum LogicType {
+    And,
+    Or
 }
 
 #[derive(Debug, Clone)]
@@ -24,7 +29,6 @@ pub enum Token {
     Arg(String),
     Pipe,
     Background,
-    AndLogical,
-    OrLogical,
+    Logic(LogicType),
     Redirect(RedirectType),
 }

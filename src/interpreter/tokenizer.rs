@@ -1,4 +1,4 @@
-use super::node::{RedirectType, Token};
+use super::node::{RedirectType, Token, LogicType};
 use std::str::Chars;
 
 pub struct Tokenizer<'a> {
@@ -28,7 +28,7 @@ impl<'a> Tokenizer<'a> {
                 '|' => {
                     self.advance();
                     if self.current_char == Some('|') {
-                        tokens.push(Token::OrLogical);
+                        tokens.push(Token::Logic(LogicType::Or));
                     } else {
                         tokens.push(Token::Pipe);
                     }
@@ -37,7 +37,7 @@ impl<'a> Tokenizer<'a> {
                 '&' => {
                     self.advance();
                     if self.current_char == Some('&') {
-                        tokens.push(Token::AndLogical);
+                        tokens.push(Token::Logic(LogicType::And));
                     } else if self.current_char == Some('>') {
                         tokens.push(Token::Redirect(RedirectType::Anything));
                     } else {

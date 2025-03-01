@@ -1,4 +1,4 @@
-use super::node::{Ast, Token};
+use super::node::{Ast, Token, LogicType};
 use std::iter::Peekable;
 use std::slice::Iter;
 
@@ -73,13 +73,13 @@ impl<'a> Parser<'a> {
                     ))
                 }
             }
-            Token::AndLogical => {
+            Token::Logic(LogicType::And) => {
                 let right = self.parse_expression(precedence + 1)?;
-                Ok(Ast::AndLogical(Box::new(left), Box::new(right)))
+                Ok(Ast::Logic(Box::new(left), Box::new(right), LogicType::And))
             }
-            Token::OrLogical => {
+            Token::Logic(LogicType::Or) => {
                 let right = self.parse_expression(precedence + 1)?;
-                Ok(Ast::OrLogical(Box::new(left), Box::new(right)))
+                Ok(Ast::Logic(Box::new(left), Box::new(right), LogicType::Or))
             }
             Token::Redirect(redirect_type) => {
                 let right = self.parse_expression(precedence + 1)?;
@@ -96,7 +96,7 @@ impl<'a> Parser<'a> {
     pub fn get_precedence(token: &Token) -> u8 {
         match token {
             Token::Background => 10,
-            Token::AndLogical | Token::OrLogical => 20,
+            Token::Logic(_) => 20,
             Token::Pipe => 30,
             Token::Redirect(_) => 40,
             Token::Arg(_) => 50,
