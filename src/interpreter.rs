@@ -1,8 +1,7 @@
 mod node;
 mod tokenizer;
 mod parser;
-use super::interpreter::tokenizer::Tokenizer;
-use super::interpreter::parser::Parser;
+use super::interpreter::{parser::Parser, tokenizer::Tokenizer};
 
 pub struct Interpreter {
     // Example enviroment for future cases
