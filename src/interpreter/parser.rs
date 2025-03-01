@@ -1,6 +1,5 @@
 use super::node::{Ast, Token, LogicType};
-use std::iter::Peekable;
-use std::slice::Iter;
+use std::{iter::Peekable, slice::Iter};
 
 pub struct Parser<'a> {
     tokens: Peekable<Iter<'a, Token>>,
