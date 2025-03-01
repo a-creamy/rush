@@ -3,6 +3,7 @@ use std::{
     env,
     io::{stdin, stdout, Write},
 };
+use super::interpreter::Interpreter;
 
 struct Shell {
     prompt: String,
@@ -24,7 +25,7 @@ impl Shell {
 
         let mut s = String::new();
         print!(
-            "{} > ",
+            "{}",
             self.prompt.replace(
                 r"\w",
                 env::current_dir()
@@ -67,8 +68,10 @@ impl Shell {
 }
 
 pub fn run() {
-    let shell = Shell::new(r"\w");
+    let shell = Shell::new(r"\w > ");
+    let interpreter = Interpreter::new();
+
     loop {
-        println!("{}", shell.interactive());
+        interpreter.interpret(shell.interactive().as_str())
     }
 }
