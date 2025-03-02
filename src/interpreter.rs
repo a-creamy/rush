@@ -1,7 +1,7 @@
 mod node;
-mod tokenizer;
+mod lexer;
 mod parser;
-use super::interpreter::{parser::Parser, tokenizer::Tokenizer};
+use super::interpreter::{parser::Parser, lexer::Lexer};
 
 pub struct Interpreter {
     // Example enviroment for future cases
@@ -15,8 +15,8 @@ impl Interpreter {
     }
 
     pub fn interpret<'a>(&self, input: &'a str) {
-        let mut tokenizer = Tokenizer::new(input);
-        let tokens = tokenizer.tokenize();
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.lex();
 
         if tokens.is_empty() {
             return;

@@ -1,4 +1,4 @@
-use super::node::{Ast, Token, LogicType};
+use super::node::{Ast, LogicType, Token};
 use std::{iter::Peekable, slice::Iter};
 
 pub struct Parser<'a> {
