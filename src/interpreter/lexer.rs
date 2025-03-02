@@ -1,14 +1,14 @@
 use super::node::{LogicType, RedirectType, Token};
 use std::str::Chars;
 
-pub struct Tokenizer<'a> {
+pub struct Lexer<'a> {
     input: Chars<'a>,
     current_char: Option<char>,
 }
 
-impl<'a> Tokenizer<'a> {
+impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
-        let mut tokenizer = Tokenizer {
+        let mut tokenizer = Lexer {
             input: input.chars(),
             current_char: None,
         };
@@ -20,7 +20,7 @@ impl<'a> Tokenizer<'a> {
         self.current_char = self.input.next();
     }
 
-    pub fn tokenize(&mut self) -> Vec<Token> {
+    pub fn lex(&mut self) -> Vec<Token> {
         let mut tokens = Vec::new();
 
         while let Some(c) = self.current_char {
