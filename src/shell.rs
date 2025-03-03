@@ -69,7 +69,7 @@ impl Shell {
 
 pub fn run() {
     let shell = Shell::new(r"\w > ");
-    let interpreter = Interpreter::new();
+    let interpreter = Interpreter::new(false);
 
     loop {
         interpreter.interpret(shell.interactive().as_str())
