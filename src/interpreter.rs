@@ -2,11 +2,13 @@ mod lexer;
 mod node;
 mod parser;
 use super::interpreter::{lexer::Lexer, node::Ast, node::LogicType, parser::Parser};
-use std::io::ErrorKind;
-use std::process::Command;
+use std::{
+    io::ErrorKind,
+    process::{Command, Stdio},
+};
 
 pub struct Interpreter {
-    // Example enviroment for future cases
+    // Example environment for future cases
     // Should be used for example: keeping track of variables
     // env: Environment
     debug: bool,
@@ -33,12 +35,12 @@ impl Interpreter {
             return Err(format!(
                 "'{}' failed: Exit code: {}",
                 &args[0],
-                &cmd.unwrap().code().unwrap()
+                &cmd.unwrap().code().unwrap_or(-1)
             )
             .into());
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn logic(
@@ -49,26 +51,72 @@ impl Interpreter {
     ) -> Result<(), Box<dyn std::error::Error>> {
         match logic_type {
             LogicType::And => {
-                if let Err(e) = self.execute(lhs) {
-                    return Err(e);
-                }
+                self.execute(lhs)?;
                 self.execute(rhs)?;
-                return Ok(());
+                Ok(())
             }
             LogicType::Or => match self.execute(lhs) {
-                Ok(_) => return Ok(()),
-                Err(e) => {
-                    self.execute(rhs)?;
-                    return Err(e);
-                }
+                Ok(_) => Ok(()),
+                Err(_) => self.execute(rhs),
             },
+        }
+    }
+
+    fn pipe(&self, lhs: &Ast, rhs: &Ast) -> Result<(), Box<dyn std::error::Error>> {
+        let (left_cmd, left_args) = if let Ast::Command(args) = lhs {
+            (&args[0], &args[1..])
+        } else {
+            return Err("Left hand side of the pipe must be a command".into());
         };
+
+        let (right_cmd, right_args) = if let Ast::Command(args) = rhs {
+            (&args[0], &args[1..])
+        } else {
+            return Err("Right hand side of the pipe must be a command".into());
+        };
+
+        let mut left_process = Command::new(left_cmd)
+            .args(left_args)
+            .stdout(Stdio::piped())
+            .spawn()?;
+        let left_stdout = left_process
+            .stdout
+            .take()
+            .ok_or("Failed to capture stdout from left command")?;
+        let left_status = left_process.wait()?;
+
+        let right = Command::new(right_cmd)
+            .args(right_args)
+            .stdin(Stdio::from(left_stdout))
+            .spawn()?
+            .wait()?;
+
+        if !left_status.success() {
+            return Err(format!(
+                "'{}' failed: Exit code: {}",
+                left_cmd,
+                left_status.code().unwrap()
+            )
+            .into());
+        }
+
+        if !right.success() {
+            return Err(format!(
+                "'{}' failed: Exit code: {}",
+                right_cmd,
+                right.code().unwrap()
+            )
+            .into());
+        }
+
+        Ok(())
     }
 
     fn execute(&self, node: &Ast) -> Result<(), Box<dyn std::error::Error>> {
         match node {
-            Ast::Command(args) => Ok(self.command(args.to_vec())?),
-            Ast::Logic(lhs, rhs, logic_type) => Ok(self.logic(lhs, rhs, logic_type.clone())?),
+            Ast::Command(args) => self.command(args.to_vec()),
+            Ast::Logic(lhs, rhs, logic_type) => self.logic(lhs, rhs, logic_type.clone()),
+            Ast::Pipe(lhs, rhs) => self.pipe(lhs, rhs),
             _ => Err("Unsupported symbol".into()),
         }
     }
