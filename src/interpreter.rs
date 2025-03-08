@@ -1,7 +1,11 @@
 mod lexer;
 mod node;
 mod parser;
-use super::interpreter::{lexer::Lexer, node::Ast, node::LogicType, parser::Parser};
+use super::interpreter::{
+    lexer::Lexer, node::Ast, node::LogicType, node::RedirectType, parser::Parser,
+};
+use std::fs::File;
+use std::path::PathBuf;
 use std::{
     io::ErrorKind,
     process::{Command, Stdio},
@@ -112,11 +116,39 @@ impl Interpreter {
         Ok(())
     }
 
+    fn redirect(
+        &self,
+        lhs: &Ast,
+        rhs: &Ast,
+        redirect_type: RedirectType,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match redirect_type {
+            RedirectType::Overwrite => {
+                if let Ast::Command(args) = lhs {
+                    let filepath = if let Ast::Command(file) = rhs {
+                        File::create(PathBuf::from(&file[0]))?
+                    } else {
+                        return Err("Invalid filepath".into());
+                    };
+
+                    Command::new(&args[0])
+                        .args(&args[1..])
+                        .stdout(Stdio::from(filepath))
+                        .spawn()?;
+                }
+            },
+            _ => return Err("Unsupported redirection symbol".into()),
+        };
+
+        return Ok(());
+    }
+
     fn execute(&self, node: &Ast) -> Result<(), Box<dyn std::error::Error>> {
         match node {
             Ast::Command(args) => self.command(args.to_vec()),
             Ast::Logic(lhs, rhs, logic_type) => self.logic(lhs, rhs, logic_type.clone()),
             Ast::Pipe(lhs, rhs) => self.pipe(lhs, rhs),
+            Ast::Redirect(lhs, rhs, redirect_type) => self.redirect(lhs, rhs, redirect_type.clone()),
             _ => Err("Unsupported symbol".into()),
         }
     }
