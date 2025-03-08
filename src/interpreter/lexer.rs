@@ -51,7 +51,7 @@ impl<'a> Lexer<'a> {
                     if self.current_char == Some('>') {
                         tokens.push(Token::Redirect(RedirectType::Append))
                     } else {
-                        tokens.push(Token::Redirect(RedirectType::Output));
+                        tokens.push(Token::Redirect(RedirectType::Overwrite));
                     }
                     self.advance();
                 }
