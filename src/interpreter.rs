@@ -1,13 +1,14 @@
+mod error;
 mod lexer;
 mod node;
 mod parser;
 use super::interpreter::{
-    lexer::Lexer, node::Ast, node::LogicType, node::RedirectType, parser::Parser,
+    error::ShellError, lexer::Lexer, node::Ast, node::LogicType, node::RedirectType, parser::Parser,
 };
-use std::fs::File;
-use std::path::PathBuf;
 use std::{
+    fs::File,
     io::ErrorKind,
+    path::PathBuf,
     process::{Command, Stdio},
 };
 
@@ -23,7 +24,7 @@ impl Interpreter {
         Interpreter { debug }
     }
 
-    fn command(&self, args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+    fn command(&self, args: Vec<String>) -> Result<(), ShellError> {
         let cmd = Command::new(&args[0])
             .args(&args[1..])
             .spawn()
@@ -31,28 +32,18 @@ impl Interpreter {
 
         if let Err(e) = &cmd {
             if e.kind() == ErrorKind::NotFound {
-                return Err(format!("Unknown Command: {}", &args[0]).into());
+                return Err(ShellError::CommandNotFound(args[0].clone()));
             }
         }
 
         if !cmd.as_ref().unwrap().success() {
-            return Err(format!(
-                "'{}' failed: Exit code: {}",
-                &args[0],
-                &cmd.unwrap().code().unwrap_or(-1)
-            )
-            .into());
+            return Err(ShellError::CommandFailure(args[0].clone(), cmd.unwrap()));
         }
 
         Ok(())
     }
 
-    fn logic(
-        &self,
-        lhs: &Ast,
-        rhs: &Ast,
-        logic_type: LogicType,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn logic(&self, lhs: &Ast, rhs: &Ast, logic_type: LogicType) -> Result<(), ShellError> {
         match logic_type {
             LogicType::And => {
                 self.execute(lhs)?;
@@ -66,17 +57,21 @@ impl Interpreter {
         }
     }
 
-    fn pipe(&self, lhs: &Ast, rhs: &Ast) -> Result<(), Box<dyn std::error::Error>> {
+    fn pipe(&self, lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
         let (left_cmd, left_args) = if let Ast::Command(args) = lhs {
             (&args[0], &args[1..])
         } else {
-            return Err("Left hand side of the pipe must be a command".into());
+            return Err(ShellError::InvalidArgument(
+                "Left hand side of the pipe must be a command".into(),
+            ));
         };
 
         let (right_cmd, right_args) = if let Ast::Command(args) = rhs {
             (&args[0], &args[1..])
         } else {
-            return Err("Right hand side of the pipe must be a command".into());
+            return Err(ShellError::InvalidArgument(
+                "Right hand side of the pipe must be a command".into(),
+            ));
         };
 
         let mut left_process = Command::new(left_cmd)
@@ -96,21 +91,11 @@ impl Interpreter {
             .wait()?;
 
         if !left_status.success() {
-            return Err(format!(
-                "'{}' failed: Exit code: {}",
-                left_cmd,
-                left_status.code().unwrap()
-            )
-            .into());
+            return Err(ShellError::CommandFailure(left_cmd.clone(), left_status));
         }
 
         if !right.success() {
-            return Err(format!(
-                "'{}' failed: Exit code: {}",
-                right_cmd,
-                right.code().unwrap()
-            )
-            .into());
+            return Err(ShellError::CommandFailure(right_cmd.clone(), right));
         }
 
         Ok(())
@@ -121,14 +106,14 @@ impl Interpreter {
         lhs: &Ast,
         rhs: &Ast,
         redirect_type: RedirectType,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), ShellError> {
         match redirect_type {
             RedirectType::Overwrite => {
                 if let Ast::Command(args) = lhs {
                     let filepath = if let Ast::Command(file) = rhs {
                         File::create(PathBuf::from(&file[0]))?
                     } else {
-                        return Err("Invalid filepath".into());
+                        return Err(ShellError::InvalidArgument("Unknown Filepath".into()));
                     };
 
                     Command::new(&args[0])
@@ -136,20 +121,26 @@ impl Interpreter {
                         .stdout(Stdio::from(filepath))
                         .spawn()?;
                 }
-            },
-            _ => return Err("Unsupported redirection symbol".into()),
+            }
+            _ => {
+                return Err(ShellError::InvalidArgument(
+                    "Unsupported redirect symbol".into(),
+                ))
+            }
         };
 
         return Ok(());
     }
 
-    fn execute(&self, node: &Ast) -> Result<(), Box<dyn std::error::Error>> {
+    fn execute(&self, node: &Ast) -> Result<(), ShellError> {
         match node {
             Ast::Command(args) => self.command(args.to_vec()),
             Ast::Logic(lhs, rhs, logic_type) => self.logic(lhs, rhs, logic_type.clone()),
             Ast::Pipe(lhs, rhs) => self.pipe(lhs, rhs),
-            Ast::Redirect(lhs, rhs, redirect_type) => self.redirect(lhs, rhs, redirect_type.clone()),
-            _ => Err("Unsupported symbol".into()),
+            Ast::Redirect(lhs, rhs, redirect_type) => {
+                self.redirect(lhs, rhs, redirect_type.clone())
+            }
+            _ => Err(ShellError::InvalidArgument("Unsupported Symbol".into())),
         }
     }
 
