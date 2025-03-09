@@ -159,6 +159,21 @@ impl Interpreter {
                         .wait()?;
                 }
             }
+            RedirectType::Input => {
+                if let Ast::Command(args) = lhs {
+                    let filepath = if let Ast::Command(file) = rhs {
+                        File::open(&file[0])?
+                    } else {
+                        return Err(ShellError::InvalidArgument("Unknown Filepath".into()));
+                    };
+
+                    Command::new(&args[0])
+                        .args(&args[1..])
+                        .stdin(Stdio::from(filepath))
+                        .spawn()?
+                        .wait()?;
+                }
+            }
             _ => {
                 return Err(ShellError::InvalidArgument(
                     "Unsupported redirect symbol".into(),
