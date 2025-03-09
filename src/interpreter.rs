@@ -3,10 +3,10 @@ mod lexer;
 mod node;
 mod parser;
 use super::interpreter::{
-    error::ShellError, lexer::Lexer, node::Ast, node::LogicType, node::RedirectType, parser::Parser,
+    error::ShellError, lexer::Lexer, node::{Ast, LogicType, RedirectType}, parser::Parser,
 };
 use std::{
-    fs::File,
+    fs::{File, OpenOptions},
     io::ErrorKind,
     path::PathBuf,
     process::{Command, Stdio},
@@ -78,13 +78,14 @@ impl Interpreter {
             .args(left_args)
             .stdout(Stdio::piped())
             .spawn()?;
+
         let left_stdout = left_process
             .stdout
             .take()
             .ok_or("Failed to capture stdout from left command")?;
         let left_status = left_process.wait()?;
 
-        let right = Command::new(right_cmd)
+        let right_process = Command::new(right_cmd)
             .args(right_args)
             .stdin(Stdio::from(left_stdout))
             .spawn()?
@@ -94,8 +95,8 @@ impl Interpreter {
             return Err(ShellError::CommandFailure(left_cmd.clone(), left_status));
         }
 
-        if !right.success() {
-            return Err(ShellError::CommandFailure(right_cmd.clone(), right));
+        if !right_process.success() {
+            return Err(ShellError::CommandFailure(right_cmd.clone(), right_process));
         }
 
         Ok(())
@@ -119,7 +120,24 @@ impl Interpreter {
                     Command::new(&args[0])
                         .args(&args[1..])
                         .stdout(Stdio::from(filepath))
-                        .spawn()?;
+                        .spawn()?.wait()?;
+                }
+            }
+            RedirectType::Append => {
+                if let Ast::Command(args) = lhs {
+                    let filepath = if let Ast::Command(file) = rhs {
+                        OpenOptions::new()
+                            .append(true)
+                            .create(true)
+                            .open(&file[0])?
+                    } else {
+                        return Err(ShellError::InvalidArgument("Unknown Filepath".into()));
+                    };
+
+                    Command::new(&args[0])
+                        .args(&args[1..])
+                        .stdout(Stdio::from(filepath))
+                        .spawn()?.wait()?;
                 }
             }
             _ => {
