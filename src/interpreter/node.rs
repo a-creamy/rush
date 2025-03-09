@@ -17,7 +17,6 @@ pub enum LogicType {
 #[derive(Debug, Clone)]
 pub enum RedirectType {
     Overwrite,
-    Anything,
     Input,
     Append,
     Error,
