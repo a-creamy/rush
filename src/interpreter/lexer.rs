@@ -39,8 +39,6 @@ impl<'a> Lexer<'a> {
                     self.advance();
                     if self.current_char == Some('&') {
                         tokens.push(Token::Logic(LogicType::And));
-                    } else if self.current_char == Some('>') {
-                        tokens.push(Token::Redirect(RedirectType::Anything));
                     } else {
                         tokens.push(Token::Background);
                     }

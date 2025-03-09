@@ -174,11 +174,6 @@ impl Interpreter {
                         .wait()?;
                 }
             }
-            _ => {
-                return Err(ShellError::InvalidArgument(
-                    "Unsupported redirect symbol".into(),
-                ))
-            }
         };
 
         return Ok(());
