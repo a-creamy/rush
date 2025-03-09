@@ -3,12 +3,14 @@ mod lexer;
 mod node;
 mod parser;
 use super::interpreter::{
-    error::ShellError, lexer::Lexer, node::{Ast, LogicType, RedirectType}, parser::Parser,
+    error::ShellError,
+    lexer::Lexer,
+    node::{Ast, LogicType, RedirectType},
+    parser::Parser,
 };
 use std::{
     fs::{File, OpenOptions},
     io::ErrorKind,
-    path::PathBuf,
     process::{Command, Stdio},
 };
 
@@ -112,7 +114,7 @@ impl Interpreter {
             RedirectType::Overwrite => {
                 if let Ast::Command(args) = lhs {
                     let filepath = if let Ast::Command(file) = rhs {
-                        File::create(PathBuf::from(&file[0]))?
+                        File::create(&file[0])?
                     } else {
                         return Err(ShellError::InvalidArgument("Unknown Filepath".into()));
                     };
@@ -120,7 +122,8 @@ impl Interpreter {
                     Command::new(&args[0])
                         .args(&args[1..])
                         .stdout(Stdio::from(filepath))
-                        .spawn()?.wait()?;
+                        .spawn()?
+                        .wait()?;
                 }
             }
             RedirectType::Append => {
@@ -137,7 +140,23 @@ impl Interpreter {
                     Command::new(&args[0])
                         .args(&args[1..])
                         .stdout(Stdio::from(filepath))
-                        .spawn()?.wait()?;
+                        .spawn()?
+                        .wait()?;
+                }
+            }
+            RedirectType::Error => {
+                if let Ast::Command(args) = lhs {
+                    let filepath = if let Ast::Command(file) = rhs {
+                        File::create(&file[0])?
+                    } else {
+                        return Err(ShellError::InvalidArgument("Unknown Filepath".into()));
+                    };
+
+                    Command::new(&args[0])
+                        .args(&args[1..])
+                        .stderr(Stdio::from(filepath))
+                        .spawn()?
+                        .wait()?;
                 }
             }
             _ => {
