@@ -16,8 +16,6 @@ use std::{
 
 pub struct Interpreter {
     // Example environment for future cases
-    // Should be used for example: keeping track of variables
-    // env: Environment
     debug: bool,
 }
 
@@ -32,49 +30,44 @@ impl Interpreter {
             .spawn()
             .and_then(|mut child| child.wait());
 
-        if let Err(e) = &cmd {
-            if e.kind() == ErrorKind::NotFound {
+        match &cmd {
+            Err(e) if e.kind() == ErrorKind::NotFound => {
                 return Err(ShellError::CommandNotFound(args[0].clone()));
             }
+            Ok(status) if !status.success() => {
+                return Err(ShellError::CommandFailure(args[0].clone(), *status));
+            }
+            _ => Ok(()),
         }
-
-        if !cmd.as_ref().unwrap().success() {
-            return Err(ShellError::CommandFailure(args[0].clone(), cmd.unwrap()));
-        }
-
-        Ok(())
     }
 
     fn logic(&self, lhs: &Ast, rhs: &Ast, logic_type: LogicType) -> Result<(), ShellError> {
         match logic_type {
             LogicType::And => {
                 self.execute(lhs)?;
-                self.execute(rhs)?;
-                Ok(())
+                self.execute(rhs)
             }
-            LogicType::Or => match self.execute(lhs) {
-                Ok(_) => Ok(()),
-                Err(_) => self.execute(rhs),
-            },
+            LogicType::Or => self.execute(lhs).or_else(|_| self.execute(rhs)),
+        }
+    }
+
+    fn extract_command_args<'a>(
+        &self,
+        ast: &'a Ast,
+        side: &str,
+    ) -> Result<(&'a String, &'a [String]), ShellError> {
+        if let Ast::Command(args) = ast {
+            Ok((&args[0], &args[1..]))
+        } else {
+            Err(ShellError::InvalidArgument(
+                format!("{} hand side of the pipe must be a command", side).into(),
+            ))
         }
     }
 
     fn pipe(&self, lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
-        let (left_cmd, left_args) = if let Ast::Command(args) = lhs {
-            (&args[0], &args[1..])
-        } else {
-            return Err(ShellError::InvalidArgument(
-                "Left hand side of the pipe must be a command".into(),
-            ));
-        };
-
-        let (right_cmd, right_args) = if let Ast::Command(args) = rhs {
-            (&args[0], &args[1..])
-        } else {
-            return Err(ShellError::InvalidArgument(
-                "Right hand side of the pipe must be a command".into(),
-            ));
-        };
+        let (left_cmd, left_args) = self.extract_command_args(lhs, "Left")?;
+        let (right_cmd, right_args) = self.extract_command_args(rhs, "Right")?;
 
         let mut left_process = Command::new(left_cmd)
             .args(left_args)
@@ -87,7 +80,7 @@ impl Interpreter {
             .ok_or("Failed to capture stdout from left command")?;
         let left_status = left_process.wait()?;
 
-        let right_process = Command::new(right_cmd)
+        let right_status = Command::new(right_cmd)
             .args(right_args)
             .stdin(Stdio::from(left_stdout))
             .spawn()?
@@ -97,8 +90,8 @@ impl Interpreter {
             return Err(ShellError::CommandFailure(left_cmd.clone(), left_status));
         }
 
-        if !right_process.success() {
-            return Err(ShellError::CommandFailure(right_cmd.clone(), right_process));
+        if !right_status.success() {
+            return Err(ShellError::CommandFailure(right_cmd.clone(), right_status));
         }
 
         Ok(())
@@ -110,73 +103,34 @@ impl Interpreter {
         rhs: &Ast,
         redirect_type: RedirectType,
     ) -> Result<(), ShellError> {
-        match redirect_type {
-            RedirectType::Overwrite => {
-                if let Ast::Command(args) = lhs {
-                    let filepath = if let Ast::Command(file) = rhs {
-                        File::create(&file[0])?
-                    } else {
-                        return Err(ShellError::InvalidArgument("Unknown Filepath".into()));
-                    };
-
-                    Command::new(&args[0])
-                        .args(&args[1..])
-                        .stdout(Stdio::from(filepath))
-                        .spawn()?
-                        .wait()?;
+        if let Ast::Command(args) = lhs {
+            let filepath = if let Ast::Command(file) = rhs {
+                match redirect_type {
+                    RedirectType::Overwrite => File::create(&file[0])?,
+                    RedirectType::Append => OpenOptions::new()
+                        .append(true)
+                        .create(true)
+                        .open(&file[0])?,
+                    RedirectType::Error => File::create(&file[0])?,
+                    RedirectType::Input => File::open(&file[0])?,
                 }
-            }
-            RedirectType::Append => {
-                if let Ast::Command(args) = lhs {
-                    let filepath = if let Ast::Command(file) = rhs {
-                        OpenOptions::new()
-                            .append(true)
-                            .create(true)
-                            .open(&file[0])?
-                    } else {
-                        return Err(ShellError::InvalidArgument("Unknown Filepath".into()));
-                    };
+            } else {
+                return Err(ShellError::InvalidArgument("Unknown Filepath".into()));
+            };
 
-                    Command::new(&args[0])
-                        .args(&args[1..])
-                        .stdout(Stdio::from(filepath))
-                        .spawn()?
-                        .wait()?;
-                }
-            }
-            RedirectType::Error => {
-                if let Ast::Command(args) = lhs {
-                    let filepath = if let Ast::Command(file) = rhs {
-                        File::create(&file[0])?
-                    } else {
-                        return Err(ShellError::InvalidArgument("Unknown Filepath".into()));
-                    };
+            let mut binding = Command::new(&args[0]);
+            let mut cmd = binding.args(&args[1..]);
 
-                    Command::new(&args[0])
-                        .args(&args[1..])
-                        .stderr(Stdio::from(filepath))
-                        .spawn()?
-                        .wait()?;
-                }
-            }
-            RedirectType::Input => {
-                if let Ast::Command(args) = lhs {
-                    let filepath = if let Ast::Command(file) = rhs {
-                        File::open(&file[0])?
-                    } else {
-                        return Err(ShellError::InvalidArgument("Unknown Filepath".into()));
-                    };
+            cmd = match redirect_type {
+                RedirectType::Overwrite | RedirectType::Append => cmd.stdout(Stdio::from(filepath)),
+                RedirectType::Error => cmd.stderr(Stdio::from(filepath)),
+                RedirectType::Input => cmd.stdin(Stdio::from(filepath)),
+            };
 
-                    Command::new(&args[0])
-                        .args(&args[1..])
-                        .stdin(Stdio::from(filepath))
-                        .spawn()?
-                        .wait()?;
-                }
-            }
-        };
+            cmd.spawn()?.wait()?;
+        }
 
-        return Ok(());
+        Ok(())
     }
 
     fn execute(&self, node: &Ast) -> Result<(), ShellError> {
