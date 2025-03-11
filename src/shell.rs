@@ -1,9 +1,8 @@
-// use libc::{fcntl, F_GETFL, F_SETFL, O_NONBLOCK};
+use super::interpreter::Interpreter;
 use std::{
     env,
     io::{stdin, stdout, Write},
 };
-use super::interpreter::Interpreter;
 
 struct Shell {
     prompt: String,
@@ -17,12 +16,6 @@ impl Shell {
     }
 
     fn interactive(&self) -> String {
-        /* unsafe {
-            let fd = libc::STDIN_FILENO;
-            let flags = fcntl(fd, F_GETFL);
-            fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-        } */
-
         let mut s = String::new();
         print!(
             "{}",
@@ -40,30 +33,6 @@ impl Shell {
             .read_line(&mut s)
             .expect("Did not type in correct string");
         s.trim().to_string()
-
-        /* loop {
-            match stdin().read_line(&mut s) {
-                Ok(0) => {}
-                Ok(_) => {
-                    unsafe {
-                        let fd = libc::STDIN_FILENO;
-                        let flags = fcntl(fd, F_GETFL);
-                        fcntl(fd, F_SETFL, flags & !O_NONBLOCK);
-                    }
-
-                    return s.trim().to_string();
-                }
-                Err(e) if e.kind() == io::ErrorKind::WouldBlock => {}
-                Err(e) => {
-                    unsafe {
-                        let fd = libc::STDIN_FILENO;
-                        let flags = fcntl(fd, F_GETFL);
-                        fcntl(fd, F_SETFL, flags & !O_NONBLOCK);
-                    }
-                    panic!("{e}");
-                }
-            }
-        } */
     }
 }
 
