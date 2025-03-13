@@ -12,8 +12,10 @@ use std::{
     fs::{File, OpenOptions},
     io::ErrorKind,
     process::{Command, Stdio},
+    thread,
 };
 
+#[derive(Clone)]
 pub struct Interpreter {
     // Example environment for future cases
     debug: bool,
@@ -25,6 +27,10 @@ impl Interpreter {
     }
 
     fn command(&self, args: Vec<String>) -> Result<(), ShellError> {
+        if args.is_empty() {
+            return Ok(()); // Just dont interpret it
+        }
+
         let cmd = Command::new(&args[0])
             .args(&args[1..])
             .spawn()
@@ -133,6 +139,39 @@ impl Interpreter {
         Ok(())
     }
 
+    fn background(&self, lhs: &Ast, rhs: &Ast) -> Result<(), ShellError> {
+        match lhs {
+            Ast::Command(args) => {
+                let args = args.clone();
+                let self_clone = (*self).clone();
+                thread::spawn(move || {
+                    if let Err(e) = self_clone.command(args.to_vec()) {
+                        eprintln!("{e}");
+                    }
+                });
+            }
+            Ast::Background(lhs, rhs) => {
+                self.background(lhs, rhs)?;
+            }
+            ast => {
+                self.execute(ast)?;
+            }
+        }
+
+        match rhs {
+            Ast::Command(args) => {
+                self.command(args.to_vec())?;
+            }
+            Ast::Background(lhs, rhs) => {
+                self.background(lhs, rhs)?;
+            }
+            ast => {
+                self.execute(ast)?;
+            }
+        }
+        Ok(())
+    }
+
     fn execute(&self, node: &Ast) -> Result<(), ShellError> {
         match node {
             Ast::Command(args) => self.command(args.to_vec()),
@@ -141,7 +180,7 @@ impl Interpreter {
             Ast::Redirect(lhs, rhs, redirect_type) => {
                 self.redirect(lhs, rhs, redirect_type.clone())
             }
-            _ => Err(ShellError::InvalidArgument("Unsupported Symbol".into())),
+            Ast::Background(lhs, rhs) => self.background(lhs, rhs),
         }
     }
 
