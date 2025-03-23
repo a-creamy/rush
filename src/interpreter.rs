@@ -1,9 +1,10 @@
+mod bic;
 mod error;
 mod lexer;
 mod node;
 mod parser;
 use super::interpreter::{
-    error::ShellError,
+    error::{ShellError, ShellErrorKind},
     lexer::Lexer,
     node::{Ast, LogicType, RedirectType},
     parser::Parser,
@@ -28,23 +29,31 @@ impl Interpreter {
 
     fn command(&self, args: Vec<String>) -> Result<(), ShellError> {
         if args.is_empty() {
-            return Ok(()); // Just dont interpret it
+            return Ok(()); // Just don't interpret it
         }
 
-        let cmd = Command::new(&args[0])
-            .args(&args[1..])
-            .spawn()
-            .and_then(|mut child| child.wait());
+        if let Err(e) = bic::execute(args.clone()) {
+            if let ShellErrorKind::CommandNotFound = e.kind() {
+                let cmd = Command::new(&args[0])
+                    .args(&args[1..])
+                    .spawn()
+                    .and_then(|mut child| child.wait());
 
-        match &cmd {
-            Err(e) if e.kind() == ErrorKind::NotFound => {
-                return Err(ShellError::CommandNotFound(args[0].clone()));
+                match &cmd {
+                    Err(e) if e.kind() == ErrorKind::NotFound => {
+                        return Err(ShellError::CommandNotFound(args[0].clone()));
+                    }
+                    Ok(status) if !status.success() => {
+                        return Err(ShellError::CommandFailure(args[0].clone(), *status));
+                    }
+                    _ => return Ok(()),
+                }
+            } else {
+                return Err(e);
             }
-            Ok(status) if !status.success() => {
-                return Err(ShellError::CommandFailure(args[0].clone(), *status));
-            }
-            _ => Ok(()),
         }
+
+        Ok(())
     }
 
     fn logic(&self, lhs: &Ast, rhs: &Ast, logic_type: LogicType) -> Result<(), ShellError> {
@@ -63,6 +72,11 @@ impl Interpreter {
         side: &str,
     ) -> Result<(&'a String, &'a [String]), ShellError> {
         if let Ast::Command(args) = ast {
+            if args.is_empty() {
+                return Err(ShellError::InvalidArgument(
+                    format!("{} hand side of the pipe cannot be empty", side).into(),
+                ));
+            }
             Ok((&args[0], &args[1..]))
         } else {
             Err(ShellError::InvalidArgument(
@@ -75,6 +89,12 @@ impl Interpreter {
         let (left_cmd, left_args) = self.extract_command_args(lhs, "Left")?;
         let (right_cmd, right_args) = self.extract_command_args(rhs, "Right")?;
 
+        if bic::is_bic(left_cmd.as_str()) || bic::is_bic(right_cmd.as_str()) {
+            return Err(ShellError::InvalidArgument(
+                "Cannot pipe to or from built-in commands".into(),
+            ));
+        }
+
         let mut left_process = Command::new(left_cmd)
             .args(left_args)
             .stdout(Stdio::piped())
@@ -83,7 +103,8 @@ impl Interpreter {
         let left_stdout = left_process
             .stdout
             .take()
-            .ok_or("Failed to capture stdout from left command")?;
+            .ok_or_else(|| ShellError::from("Failed to capture stdout from left command"))?;
+
         let left_status = left_process.wait()?;
 
         let right_status = Command::new(right_cmd)
@@ -110,7 +131,17 @@ impl Interpreter {
         redirect_type: RedirectType,
     ) -> Result<(), ShellError> {
         if let Ast::Command(args) = lhs {
+            if args.is_empty() {
+                return Err(ShellError::InvalidArgument(
+                    "Empty command for redirection".into(),
+                ));
+            }
+
             let filepath = if let Ast::Command(file) = rhs {
+                if file.is_empty() {
+                    return Err(ShellError::InvalidArgument("Empty file path".into()));
+                }
+
                 match redirect_type {
                     RedirectType::Overwrite => File::create(&file[0])?,
                     RedirectType::Append => OpenOptions::new()
@@ -133,7 +164,11 @@ impl Interpreter {
                 RedirectType::Input => cmd.stdin(Stdio::from(filepath)),
             };
 
-            cmd.spawn()?.wait()?;
+            let status = cmd.spawn()?.wait()?;
+
+            if !status.success() {
+                return Err(ShellError::CommandFailure(args[0].clone(), status));
+            }
         }
 
         Ok(())
