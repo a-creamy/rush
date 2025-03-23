@@ -1,6 +1,8 @@
 # Rush - Fast, Minimal Shell
 
-Rush is a fast and minimal shell, designed to be a complete and efficient shell for everyday use. It aims to provide a seamless and performant experience while adhering to POSIX standards.
+Rush is a fast and minimal shell, designed to be a complete and efficient shell for everyday use. It aims to provide a seamless and performant experience while adhering to POSIX standards. 
+
+Note: It's still in it's early stage's so expect some bugs!
 
 ## Features
 
