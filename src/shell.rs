@@ -2,6 +2,7 @@ use super::interpreter::Interpreter;
 use std::{
     env,
     io::{stdin, stdout, Write},
+    path::PathBuf,
 };
 
 struct Shell {
@@ -15,17 +16,24 @@ impl Shell {
         }
     }
 
+    fn current_dir(&self) -> PathBuf {
+        let home = env::var("HOME").ok().map(PathBuf::from).unwrap();
+        let current = env::current_dir()
+            .unwrap_or_else(|e| panic!("{e}"))
+            .to_path_buf();
+        if home == current {
+            return PathBuf::from("~");
+        } else {
+            return current;
+        }
+    }
+
     fn interactive(&self) -> String {
         let mut s = String::new();
         print!(
             "{}",
-            self.prompt.replace(
-                r"\w",
-                env::current_dir()
-                    .unwrap_or_else(|e| panic!("{e}"))
-                    .to_str()
-                    .unwrap()
-            )
+            self.prompt
+                .replace(r"\w", self.current_dir().to_str().unwrap())
         );
 
         let _ = stdout().flush();
