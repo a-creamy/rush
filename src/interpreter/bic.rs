@@ -1,5 +1,5 @@
 use super::error::ShellError;
-use std::{env, path::Path};
+use std::{env, path::Path, time::Instant, process::Command};
 
 fn cd(args: &[String]) -> Result<(), ShellError> {
     let path_str = if args.is_empty() || args[0] == "~" {
@@ -36,8 +36,16 @@ fn pwd() -> Result<(), ShellError> {
     }
 }
 
+fn time(args: &[String]) -> Result<(), ShellError> {
+    let start = Instant::now();
+    Command::new(&args[0]).args(&args[1..]).spawn()?.wait()?;
+    let time = start.elapsed();
+    println!("Finished! {} ms", time.as_millis());
+    Ok(())
+}
+
 pub fn is_bic(cmd: &str) -> bool {
-    matches!(cmd, "cd" | "exit" | "pwd")
+    matches!(cmd, "cd" | "exit" | "pwd" | "time")
 }
 
 pub fn execute(args: Vec<String>) -> Result<(), ShellError> {
@@ -49,6 +57,7 @@ pub fn execute(args: Vec<String>) -> Result<(), ShellError> {
         "cd" => cd(&args[1..]),
         "exit" => exit(&args[1..]),
         "pwd" => pwd(),
+        "time" => time(&args[1..]),
         _ => Err(ShellError::CommandNotFound(format!(
             "Unknown Built In Command:{}",
             &args[0]
