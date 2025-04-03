@@ -4,6 +4,7 @@ use std::{
     io::{stdin, stdout, Write},
     path::PathBuf,
 };
+use libc::{signal, SIGINT, SIG_IGN};
 
 struct Shell {
     prompt: String,
@@ -47,6 +48,10 @@ impl Shell {
 pub fn run() {
     let shell = Shell::new(r"\w > ");
     let interpreter = Interpreter::new(false);
+
+    unsafe {
+        signal(SIGINT, SIG_IGN);
+    }
 
     loop {
         interpreter.interpret(shell.interactive().as_str())
