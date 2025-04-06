@@ -13,14 +13,14 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) -> Result<Ast, String> {
-        self.parse_expression(0)
+        self.expression(0)
     }
 
-    fn parse_expression(&mut self, precedence: u8) -> Result<Ast, String> {
-        let mut left = self.parse_primary()?;
+    fn expression(&mut self, precedence: u8) -> Result<Ast, String> {
+        let mut left = self.primary()?;
 
         while let Some(&token) = self.tokens.peek() {
-            let token_precedence = Parser::<'a>::get_precedence(token);
+            let token_precedence = Parser::precedence(token);
 
             if token_precedence < precedence {
                 break;
@@ -28,13 +28,13 @@ impl<'a> Parser<'a> {
 
             let token = self.tokens.next().unwrap();
 
-            left = self.parse_infix(left, &token, token_precedence)?;
+            left = self.infix(left, &token, token_precedence)?;
         }
 
         Ok(left)
     }
 
-    fn parse_primary(&mut self) -> Result<Ast, String> {
+    fn primary(&mut self) -> Result<Ast, String> {
         if let Some(token) = self.tokens.next() {
             match token {
                 Token::Arg(value) => {
@@ -55,15 +55,15 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_infix(&mut self, left: Ast, token: &Token, precedence: u8) -> Result<Ast, String> {
+    fn infix(&mut self, left: Ast, token: &Token, precedence: u8) -> Result<Ast, String> {
         match token {
             Token::Pipe => {
-                let right = self.parse_expression(precedence + 1)?;
+                let right = self.expression(precedence + 1)?;
                 Ok(Ast::Pipe(Box::new(left), Box::new(right)))
             }
             Token::Background => {
                 if self.tokens.peek().is_some() {
-                    let right = self.parse_expression(precedence + 1)?;
+                    let right = self.expression(precedence + 1)?;
                     Ok(Ast::Background(Box::new(left), Box::new(right)))
                 } else {
                     Ok(Ast::Background(
@@ -73,15 +73,15 @@ impl<'a> Parser<'a> {
                 }
             }
             Token::Logic(LogicType::And) => {
-                let right = self.parse_expression(precedence + 1)?;
+                let right = self.expression(precedence + 1)?;
                 Ok(Ast::Logic(Box::new(left), Box::new(right), LogicType::And))
             }
             Token::Logic(LogicType::Or) => {
-                let right = self.parse_expression(precedence + 1)?;
+                let right = self.expression(precedence + 1)?;
                 Ok(Ast::Logic(Box::new(left), Box::new(right), LogicType::Or))
             }
             Token::Redirect(redirect_type) => {
-                let right = self.parse_expression(precedence + 1)?;
+                let right = self.expression(precedence + 1)?;
                 Ok(Ast::Redirect(
                     Box::new(left),
                     Box::new(right),
@@ -92,7 +92,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn get_precedence(token: &Token) -> u8 {
+    fn precedence(token: &Token) -> u8 {
         match token {
             Token::Background => 10,
             Token::Logic(_) => 20,
