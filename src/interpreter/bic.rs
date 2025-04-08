@@ -1,5 +1,5 @@
 use super::error::ShellError;
-use std::{env, path::Path, time::Instant, process::Command};
+use std::{env, path::Path, process::Command, time::Instant};
 
 fn cd(args: &[String]) -> Result<(), ShellError> {
     let path_str = if args.is_empty() || args[0] == "~" {
@@ -38,7 +38,9 @@ fn pwd() -> Result<(), ShellError> {
 
 fn time(args: &[String]) -> Result<(), ShellError> {
     let start = Instant::now();
-    Command::new(&args[0]).args(&args[1..]).spawn()?.wait()?;
+    if !args.is_empty() {
+        Command::new(&args[0]).args(&args[1..]).spawn()?.wait()?;
+    }
     let time = start.elapsed();
     println!("Finished! {} ms", time.as_millis());
     Ok(())
