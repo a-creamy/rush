@@ -17,14 +17,11 @@ use std::{
 };
 
 #[derive(Clone)]
-pub struct Interpreter {
-    // Example environment for future cases
-    debug: bool,
-}
+pub struct Interpreter;
 
 impl Interpreter {
-    pub fn new(debug: bool) -> Self {
-        Interpreter { debug }
+    pub fn new() -> Self {
+        Interpreter
     }
 
     fn command(&self, args: Vec<String>) -> Result<(), ShellError> {
@@ -235,11 +232,6 @@ impl Interpreter {
                 return;
             }
         };
-
-        if self.debug {
-            println!("Tokens: {:?}", tokens);
-            println!("Ast: {:?}", ast);
-        }
 
         if let Err(e) = self.execute(&ast) {
             eprintln!("rush: {e}");

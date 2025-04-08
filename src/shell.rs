@@ -52,7 +52,7 @@ pub fn run() {
     }
 
     let shell = Shell::new(r"\w > ");
-    let interpreter = Interpreter::new(false);
+    let interpreter = Interpreter::new();
 
     loop {
         interpreter.interpret(shell.interactive().as_str())
