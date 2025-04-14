@@ -204,6 +204,32 @@ impl Interpreter {
         Ok(())
     }
 
+    fn separator(&self, left: &Ast, right: &Ast) -> Result<(), ShellError> {
+        match left {
+            Ast::Command(args) => {
+                self.command(args.to_vec())?;
+            }
+            Ast::Separator(lhs, rhs) => {
+                self.separator(lhs, rhs)?;
+            }
+            ast => {
+                self.execute(ast)?;
+            }
+        }
+        match right {
+            Ast::Command(args) => {
+                self.command(args.to_vec())?;
+            }
+            Ast::Separator(lhs, rhs) => {
+                self.separator(lhs, rhs)?;
+            }
+            ast => {
+                self.execute(ast)?;
+            }
+        }
+        Ok(())
+    }
+
     fn execute(&self, node: &Ast) -> Result<(), ShellError> {
         match node {
             Ast::Command(args) => self.command(args.to_vec()),
@@ -213,6 +239,7 @@ impl Interpreter {
                 self.redirect(lhs, rhs, redirect_type.clone())
             }
             Ast::Background(lhs, rhs) => self.background(lhs, rhs),
+            Ast::Separator(lhs, rhs) => self.separator(lhs, rhs),
         }
     }
 

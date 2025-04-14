@@ -88,12 +88,17 @@ impl<'a> Parser<'a> {
                     redirect_type.clone(),
                 ))
             }
+            Token::Separator => {
+                let right = self.expression(precedence + 1)?;
+                Ok(Ast::Separator(Box::new(left), Box::new(right)))
+            }
             _ => Err(format!("Unexpected infix token: {:?}", token)),
         }
     }
 
     fn precedence(token: &Token) -> u8 {
         match token {
+            Token::Separator => 1,
             Token::Background => 10,
             Token::Logic(_) => 20,
             Token::Pipe => 30,

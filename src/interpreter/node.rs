@@ -6,12 +6,13 @@ pub enum Ast {
     Background(Box<Ast>, Box<Ast>),
     Logic(Box<Ast>, Box<Ast>, LogicType),
     Redirect(Box<Ast>, Box<Ast>, RedirectType),
+    Separator(Box<Ast>, Box<Ast>),
 }
 
 #[derive(Debug, Clone)]
 pub enum LogicType {
     And,
-    Or
+    Or,
 }
 
 #[derive(Debug, Clone)]
@@ -30,4 +31,5 @@ pub enum Token {
     Background,
     Logic(LogicType),
     Redirect(RedirectType),
+    Separator,
 }

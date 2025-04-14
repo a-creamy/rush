@@ -57,6 +57,10 @@ impl<'a> Lexer<'a> {
                     self.advance();
                     tokens.push(Token::Redirect(RedirectType::Input));
                 }
+                ';' => {
+                    self.advance();
+                    tokens.push(Token::Separator);
+                }
                 _ => {
                     let mut arg = String::new();
 
