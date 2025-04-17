@@ -1,10 +1,10 @@
 use super::interpreter::Interpreter;
+use libc::{signal, SIGINT, SIGTSTP, SIG_IGN};
 use std::{
     env,
     io::{stdin, stdout, Write},
     path::PathBuf,
 };
-    use libc::{signal, SIGINT, SIGTSTP, SIG_IGN};
 
 struct Shell {
     prompt: String,
