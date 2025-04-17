@@ -1,4 +1,4 @@
-use super::node::{Ast, LogicType, Token};
+use super::node::{Ast, Token};
 use std::{iter::Peekable, slice::Iter};
 
 pub struct Parser<'a> {
@@ -48,51 +48,35 @@ impl<'a> Parser<'a> {
 
                     Ok(Ast::Command(args))
                 }
-                _ => Err(format!("Unexpected token: {:?}", token)),
+                _ => Err("Unexpected symbol".into()),
             }
         } else {
-            Err("Unexpected end of tokens".to_string())
+            Ok(Ast::Command(vec![]))
         }
     }
 
     fn infix(&mut self, left: Ast, token: &Token, precedence: u8) -> Result<Ast, String> {
+        let right = self.expression(precedence + 1)?;
+
         match token {
-            Token::Pipe => {
-                let right = self.expression(precedence + 1)?;
-                Ok(Ast::Pipe(Box::new(left), Box::new(right)))
-            }
-            Token::Background => {
-                if self.tokens.peek().is_some() {
-                    let right = self.expression(precedence + 1)?;
-                    Ok(Ast::Background(Box::new(left), Box::new(right)))
-                } else {
-                    Ok(Ast::Background(
-                        Box::new(left),
-                        Box::new(Ast::Command(vec![])),
-                    ))
-                }
-            }
-            Token::Logic(LogicType::And) => {
-                let right = self.expression(precedence + 1)?;
-                Ok(Ast::Logic(Box::new(left), Box::new(right), LogicType::And))
-            }
-            Token::Logic(LogicType::Or) => {
-                let right = self.expression(precedence + 1)?;
-                Ok(Ast::Logic(Box::new(left), Box::new(right), LogicType::Or))
-            }
-            Token::Redirect(redirect_type) => {
-                let right = self.expression(precedence + 1)?;
-                Ok(Ast::Redirect(
-                    Box::new(left),
-                    Box::new(right),
-                    redirect_type.clone(),
-                ))
-            }
-            Token::Separator => {
-                let right = self.expression(precedence + 1)?;
-                Ok(Ast::Separator(Box::new(left), Box::new(right)))
-            }
-            _ => Err(format!("Unexpected infix token: {:?}", token)),
+            Token::Pipe => Ok(Ast::Pipe(Box::new(left), Box::new(right))),
+            Token::Background => Ok(if self.tokens.peek().is_some() {
+                Ast::Background(Box::new(left), Box::new(right))
+            } else {
+                Ast::Background(Box::new(left), Box::new(Ast::Command(vec![])))
+            }),
+            Token::Logic(logic_type) => Ok(Ast::Logic(
+                Box::new(left),
+                Box::new(right),
+                logic_type.clone(),
+            )),
+            Token::Redirect(redirect_type) => Ok(Ast::Redirect(
+                Box::new(left),
+                Box::new(right),
+                redirect_type.clone(),
+            )),
+            Token::Separator => Ok(Ast::Separator(Box::new(left), Box::new(right))),
+            _ => Err("Unexpected infix symbol".into()),
         }
     }
 
