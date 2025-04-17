@@ -1,4 +1,3 @@
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum Ast {
     Command(Vec<String>),
@@ -23,7 +22,6 @@ pub enum RedirectType {
     Error,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Token {
     Arg(String),
