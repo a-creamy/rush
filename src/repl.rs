@@ -3,6 +3,7 @@ use std::{
     io::{stdin, stdout, Write},
     path::PathBuf,
 };
+use crate::engine;
 
 struct Shell {
     prompt: String,
@@ -41,7 +42,10 @@ impl Shell {
             .read_line(&mut s)
             .expect("Did not type in correct string");
 
-        println!("{}", s.trim());
+        match engine::eval(s.trim()) {
+            Ok(()) => (),
+            Err(e) => eprintln!("{}", e),
+        }
     }
 }
 
