@@ -34,9 +34,12 @@ impl<'a> Lexer<'a> {
                 _ => {
                     let mut arg = ch.to_string();
 
-                    while let Some(c) = self.input.next() {
+                    while let Some(&c) = self.input.peek() {
                         match c {
-                            'a'..='z' | 'A'..='Z' | '.' | '_' | '-' => arg.push(c),
+                            'a'..='z' | 'A'..='Z' | '.' | '_' | '-' => {
+                                self.input.next();
+                                arg.push(c);
+                            }
                             _ => break,
                         }
                     }
