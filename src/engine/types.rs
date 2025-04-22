@@ -27,3 +27,14 @@ impl Token {
         }
     }
 }
+
+pub enum Cmd {
+    Command(Vec<String>),
+    BinaryOp(Box<Cmd>, Operator, Box<Cmd>),
+}
+
+pub enum Operator {
+    And,
+    Or,
+    Pipe,
+}
