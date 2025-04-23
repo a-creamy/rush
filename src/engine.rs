@@ -1,13 +1,14 @@
+pub mod error;
 mod lexer;
 mod parser;
 mod types;
-pub mod error;
 use crate::engine::{
+    error::ShellError,
     lexer::Lexer,
     parser::Parser,
     types::{Cmd, Operator},
-    error::ShellError,
 };
+use std::io::ErrorKind;
 use std::process::Command;
 
 pub fn eval(input: &str) -> Result<(), ShellError> {
@@ -20,7 +21,13 @@ fn basic_cmd(cmd: Cmd) -> Result<(), ShellError> {
             .args(&args[1..])
             .spawn()
             .and_then(|mut child| child.wait())
-            .map_err(|e| ShellError::from(e))?;
+            .map_err(|e| {
+                if e.kind() == ErrorKind::NotFound {
+                    ShellError::CommandNotFound(args[0].clone())
+                } else {
+                    ShellError::from(e)
+                }
+            })?;
 
         if !status.success() {
             return Err(ShellError::CommandFailure(args[0].clone(), status));
@@ -39,7 +46,13 @@ fn execute(cmd: Cmd) -> Result<(), ShellError> {
             .spawn()
             .and_then(|mut child| child.wait())
             .map(|_| ())
-            .map_err(|e| ShellError::from(e))?),
+            .map_err(|e| {
+                if e.kind() == ErrorKind::NotFound {
+                    ShellError::CommandNotFound(args[0].clone())
+                } else {
+                    ShellError::from(e)
+                }
+            })?),
         Cmd::BinaryOp(left, op, right) => match op {
             Operator::And => basic_cmd(*left).and_then(|_| basic_cmd(*right)),
             Operator::Or => basic_cmd(*left)
