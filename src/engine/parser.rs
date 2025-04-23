@@ -19,7 +19,10 @@ impl<'a> Parser<'a> {
     fn expression(&mut self, precedence: u8) -> Result<Cmd, String> {
         let mut left = self.primary()?;
 
-        while let Some(token) = self.tokens.next_if(|&c| c.precedence() >= precedence) {
+        while let Some(token) = self.tokens.next() {
+            if token.precedence() < precedence {
+                break;
+            }
             left = self.infix(left, &token)?;
         }
 
@@ -35,7 +38,7 @@ impl<'a> Parser<'a> {
                     self.tokens.next();
                     cmd.push(arg.to_owned());
                 }
-                t => return Err(format!("Unexpected symbol '{}'", t)),
+                _ => break,
             }
         }
 
@@ -64,7 +67,7 @@ impl<'a> Parser<'a> {
                     Box::new(right),
                 ))
             }
-            _ => Err(format!("Unkown operator '{}'", token)),
+            _ => Err(format!("Unkown shell operator '{}'", token)),
         }
     }
 }

@@ -44,7 +44,7 @@ impl Shell {
 
         match engine::eval(s.trim()) {
             Ok(()) => (),
-            Err(e) => eprintln!("{}", e),
+            Err(e) => eprintln!("rush: {}", e),
         }
     }
 }
