@@ -1,5 +1,5 @@
 use std::{
-    io::{Error, ErrorKind},
+    io::Error,
     process::ExitStatus,
 };
 
@@ -44,18 +44,12 @@ impl std::fmt::Display for ShellError {
             ShellError::CommandNotFound(cmd) => write!(f, "Unknown Command: {}", cmd),
             // ShellError::InvalidArgument(msg) => write!(f, "Invalid argument: {}", msg),
             ShellError::CommandFailure(cmd, exit_status) => {
-                write!(f, "'{}' Failed: Exit Code: {}", cmd, exit_status)
+                write!(f, "'{}' failed with status {}", cmd, exit_status)
             }
-            ShellError::LexerError(msg) => write!(f, "Error occured during lexing: {}", msg),
-            ShellError::ParserError(msg) => write!(f, "Error occured during parsing: {}", msg),
+            ShellError::LexerError(msg) => write!(f, "Lexer: {}", msg),
+            ShellError::ParserError(msg) => write!(f, "Parser: {}", msg),
             ShellError::IoError(e) => write!(f, "IO error: {}", e),
         }
-    }
-}
-
-impl From<&str> for ShellError {
-    fn from(error: &str) -> Self {
-        ShellError::IoError(Error::new(ErrorKind::Other, error))
     }
 }
 

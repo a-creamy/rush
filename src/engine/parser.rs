@@ -70,7 +70,7 @@ impl<'a> Parser<'a> {
                     Box::new(right),
                 ))
             }
-            _ => Err(ShellError::ParserError(format!("Unkown shell operator '{}': Expected a valid shell operator, please check your expression for any typos or refer to the docs", token))),
+            _ => Err(ShellError::ParserError(format!("Unkown shell operator '{}'", token))),
         }
     }
 }

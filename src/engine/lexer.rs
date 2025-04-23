@@ -29,13 +29,12 @@ impl<'a> Lexer<'a> {
                         tokens.push(Token::And);
                     } else {
                         return Err(ShellError::LexerError(format!(
-                            "Unknown shell operator '{}': Expected two '&' characters together",
+                            "Unknown shell operator '{}'",
                             match self.input.peek() {
                                 Some(c) => c,
                                 None => {
                                     return Err(ShellError::LexerError(
-                                        "Unexpected end of expression: Expected a command"
-                                            .to_string(),
+                                        "Unexpected end of expression".to_string(),
                                     ));
                                 }
                             }

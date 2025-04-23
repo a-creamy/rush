@@ -1,4 +1,4 @@
-use crate::{engine, engine::error::ShellErrorKind};
+use crate::engine::{self, error::ShellErrorKind};
 use std::{
     env,
     io::{stdin, stdout, Write},
