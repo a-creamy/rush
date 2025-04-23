@@ -1,4 +1,7 @@
-use super::types::{Cmd, Operator, Token};
+use crate::engine::{
+    error::ShellError,
+    types::{Cmd, Operator, Token},
+};
 use std::{iter::Peekable, slice::Iter};
 
 pub struct Parser<'a> {
@@ -12,11 +15,11 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Cmd, String> {
+    pub fn parse(&mut self) -> Result<Cmd, ShellError> {
         self.expression(0)
     }
 
-    fn expression(&mut self, precedence: u8) -> Result<Cmd, String> {
+    fn expression(&mut self, precedence: u8) -> Result<Cmd, ShellError> {
         let mut left = self.primary()?;
 
         while let Some(token) = self.tokens.next() {
@@ -29,7 +32,7 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
-    fn primary(&mut self) -> Result<Cmd, String> {
+    fn primary(&mut self) -> Result<Cmd, ShellError> {
         let mut cmd = Vec::new();
 
         while let Some(token) = self.tokens.peek() {
@@ -45,7 +48,7 @@ impl<'a> Parser<'a> {
         Ok(Cmd::Command(cmd))
     }
 
-    fn infix(&mut self, left: Cmd, token: &Token) -> Result<Cmd, String> {
+    fn infix(&mut self, left: Cmd, token: &Token) -> Result<Cmd, ShellError> {
         match token {
             Token::And => {
                 let right = self.expression(token.precedence() + 1)?;
@@ -67,7 +70,7 @@ impl<'a> Parser<'a> {
                     Box::new(right),
                 ))
             }
-            _ => Err(format!("Unkown shell operator '{}'", token)),
+            _ => Err(ShellError::ParserError(format!("Unkown shell operator '{}': Expected a valid shell operator, please check your expression for any typos or refer to the docs", token))),
         }
     }
 }

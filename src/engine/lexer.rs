@@ -1,4 +1,4 @@
-use crate::engine::types::Token;
+use crate::engine::{error::ShellError, types::Token};
 use std::{iter::Peekable, str::Chars};
 
 pub struct Lexer<'a> {
@@ -12,7 +12,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn lex(&mut self) -> Result<Vec<Token>, String> {
+    pub fn lex(&mut self) -> Result<Vec<Token>, ShellError> {
         let mut tokens: Vec<Token> = Vec::new();
         while let Some(ch) = self.input.next() {
             match ch {
@@ -28,7 +28,18 @@ impl<'a> Lexer<'a> {
                     if self.input.next_if(|&c| c == '&').is_some() {
                         tokens.push(Token::And);
                     } else {
-                        return Err(format!("Unknown symbol '{}'", ch));
+                        return Err(ShellError::LexerError(format!(
+                            "Unknown shell operator '{}': Expected two '&' characters together",
+                            match self.input.peek() {
+                                Some(c) => c,
+                                None => {
+                                    return Err(ShellError::LexerError(
+                                        "Unexpected end of expression: Expected a command"
+                                            .to_string(),
+                                    ));
+                                }
+                            }
+                        )));
                     }
                 }
                 _ => {

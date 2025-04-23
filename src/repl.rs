@@ -1,9 +1,9 @@
+use crate::{engine, engine::error::ShellErrorKind};
 use std::{
     env,
     io::{stdin, stdout, Write},
     path::PathBuf,
 };
-use crate::engine;
 
 struct Shell {
     prompt: String,
@@ -33,8 +33,7 @@ impl Shell {
         let mut s = String::new();
         print!(
             "{}",
-            self.prompt
-                .replace(r"\w", self.current_dir().as_str())
+            self.prompt.replace(r"\w", self.current_dir().as_str())
         );
 
         let _ = stdout().flush();
@@ -44,6 +43,7 @@ impl Shell {
 
         match engine::eval(s.trim()) {
             Ok(()) => (),
+            Err(e) if e.kind() == ShellErrorKind::CommandFailure => (),
             Err(e) => eprintln!("rush: {}", e),
         }
     }
