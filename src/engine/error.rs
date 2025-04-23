@@ -7,7 +7,7 @@ use std::{
 pub enum ShellError {
     CommandNotFound(String),
     CommandFailure(String, ExitStatus),
-    InvalidArgument(String),
+    // InvalidArgument(String),
     LexerError(String),
     ParserError(String),
     IoError(Error),
@@ -17,7 +17,7 @@ pub enum ShellError {
 pub enum ShellErrorKind {
     CommandNotFound,
     CommandFailure,
-    InvalidArgument,
+    // InvalidArgument,
     LexerError,
     ParserError,
     IoError,
@@ -28,7 +28,7 @@ impl ShellError {
         match self {
             ShellError::CommandNotFound(_) => ShellErrorKind::CommandNotFound,
             ShellError::CommandFailure(_, _) => ShellErrorKind::CommandFailure,
-            ShellError::InvalidArgument(_) => ShellErrorKind::InvalidArgument,
+            // ShellError::InvalidArgument(_) => ShellErrorKind::InvalidArgument,
             ShellError::LexerError(_) => ShellErrorKind::LexerError,
             ShellError::ParserError(_) => ShellErrorKind::ParserError,
             ShellError::IoError(_) => ShellErrorKind::IoError,
@@ -42,7 +42,7 @@ impl std::fmt::Display for ShellError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ShellError::CommandNotFound(cmd) => write!(f, "Unknown Command: {}", cmd),
-            ShellError::InvalidArgument(msg) => write!(f, "Invalid argument: {}", msg),
+            // ShellError::InvalidArgument(msg) => write!(f, "Invalid argument: {}", msg),
             ShellError::CommandFailure(cmd, exit_status) => {
                 write!(f, "'{}' Failed: Exit Code: {}", cmd, exit_status)
             }
