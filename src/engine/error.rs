@@ -1,7 +1,4 @@
-use std::{
-    io::Error,
-    process::ExitStatus,
-};
+use std::{io::{Error, ErrorKind}, process::ExitStatus};
 
 #[derive(Debug)]
 pub enum ShellError {
@@ -50,6 +47,12 @@ impl std::fmt::Display for ShellError {
             ShellError::ParserError(msg) => write!(f, "Parser: {}", msg),
             ShellError::IoError(e) => write!(f, "IO error: {}", e),
         }
+    }
+}
+
+impl From<String> for ShellError {
+    fn from(error: String) -> Self {
+        ShellError::IoError(Error::new(ErrorKind::Other, error))
     }
 }
 

@@ -28,13 +28,13 @@ impl Token {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Cmd {
     Command(Vec<String>),
     BinaryOp(Box<Cmd>, Operator, Box<Cmd>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Operator {
     And,
     Or,
