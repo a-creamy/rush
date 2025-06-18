@@ -27,7 +27,6 @@ pub const Expr = union(Type) {
 };
 
 const ParseError = error{
-    ExpectedAtomic,
     UnknownOperator,
     OutOfMemory,
 };
