@@ -2,8 +2,11 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-
     const optimize = b.standardOptimizeOption(.{});
+
+    const engine_module = b.addModule("engine", .{
+        .root_source_file = b.path("src/engine/root.zig"),
+    });
 
     const exe = b.addExecutable(.{
         .name = "flash",
@@ -12,10 +15,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    exe.root_module.addImport("engine", engine_module);
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
-
     run_cmd.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
@@ -30,6 +34,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
+    exe_unit_tests.root_module.addImport("engine", engine_module);
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
