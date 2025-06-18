@@ -32,10 +32,18 @@ pub fn run() !void {
         var buf: [1024]u8 = undefined;
         const input = try shell.ask(&buf);
 
-        const result = try lexer.lex(input);
+        const result = lexer.lex(input) catch null;
 
         var cursor: usize = 0;
-        var expr = try parse.expression(result.items, &cursor, 0);
+        var expr = parse.expression(result.?.items, &cursor, 0) catch |err| switch (err) {
+            error.OutOfMemory => {
+                std.debug.print("flash: Out of memory", .{});
+                return;
+            },
+            else => {
+                return;
+            },
+        };
 
         engine.eval(&expr);
     }

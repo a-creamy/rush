@@ -43,6 +43,7 @@ pub fn lex(source: []u8) !std.ArrayList(Token) {
             },
             ' ', '\n', '\t' => start += 1,
             else => {
+                std.debug.print("flash Unknown Symbol: '{c}'\n", .{current});
                 return error.InvalidChar;
             },
         }
