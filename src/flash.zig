@@ -1,6 +1,8 @@
 const std = @import("std");
-const lexer = @import("engine/lexer.zig");
-const parse = @import("engine/parser.zig");
+const engine = @import("engine/root.zig");
+
+const lexer = engine.lexer;
+const parse = engine.parse;
 
 const Shell = struct {
     prompt: []const u8,
@@ -37,8 +39,10 @@ pub fn run() !void {
         }
 
         var cursor: usize = 0;
-        const expr = try parse.expression(result.items, &cursor, 0);
+        var expr = try parse.expression(result.items, &cursor, 0);
         try print_expr(expr);
+
+        try engine.eval(&expr);
     }
 }
 

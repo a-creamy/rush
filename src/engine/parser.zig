@@ -22,7 +22,7 @@ const Type = enum {
 };
 
 pub const Expr = union(Type) {
-    atomic: std.ArrayList([]u8),
+    atomic: std.ArrayList([]const u8),
     binary: Binary,
 };
 
@@ -56,7 +56,7 @@ fn primary(tokens: []Token, cursor: *usize) ParseError!Expr {
 
     while (i < tokens.len and tokens[i].kind == TokenKind.Atomic) : (i += 1) {}
 
-    var result = std.ArrayList([]u8).init(heap_allocator);
+    var result = std.ArrayList([]const u8).init(heap_allocator);
 
     for (tokens[cursor.*..i]) |token| {
         try result.append(token.value);
