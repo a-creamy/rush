@@ -89,3 +89,130 @@ fn get_precedence(kind: TokenKind) u8 {
         TokenKind.Land => 3,
     };
 }
+
+const testing = std.testing;
+
+test "parse left-associative binary expression" {
+    var tokens = [_]Token{
+        Token{ .kind = TokenKind.Atomic, .value = "a" },
+        Token{ .kind = TokenKind.Land, .value = "&&" },
+        Token{ .kind = TokenKind.Atomic, .value = "b" },
+        Token{ .kind = TokenKind.Land, .value = "&&" },
+        Token{ .kind = TokenKind.Atomic, .value = "c" },
+        Token{ .kind = TokenKind.EOF, .value = "EOF" },
+    };
+
+    var cursor: usize = 0;
+    const expr = try expression(&tokens, &cursor, 0);
+
+    try testing.expect(expr == .binary);
+    try testing.expect(expr.binary.op == .land);
+    try testing.expect(expr.binary.ll.* == .binary);
+    try testing.expect(expr.binary.rr.* == .atomic);
+
+    const left_binary = expr.binary.ll.binary;
+    try testing.expect(left_binary.op == .land);
+    try testing.expect(left_binary.ll.* == .atomic);
+    try testing.expect(left_binary.rr.* == .atomic);
+    try testing.expect(std.mem.eql(u8, left_binary.ll.atomic.items[0], "a"));
+    try testing.expect(std.mem.eql(u8, left_binary.rr.atomic.items[0], "b"));
+    try testing.expect(std.mem.eql(u8, expr.binary.rr.atomic.items[0], "c"));
+
+    left_binary.ll.atomic.deinit();
+    left_binary.rr.atomic.deinit();
+    heap_allocator.destroy(left_binary.ll);
+    heap_allocator.destroy(left_binary.rr);
+    expr.binary.rr.atomic.deinit();
+    heap_allocator.destroy(expr.binary.ll);
+    heap_allocator.destroy(expr.binary.rr);
+}
+
+test "parse basic binary expression" {
+    var tokens = [_]Token{
+        Token{ .kind = TokenKind.Atomic, .value = "hello" },
+        Token{ .kind = TokenKind.Atomic, .value = "world" },
+        Token{ .kind = TokenKind.Land, .value = "&&" },
+        Token{ .kind = TokenKind.Atomic, .value = "foo" },
+        Token{ .kind = TokenKind.Atomic, .value = "bar" },
+        Token{ .kind = TokenKind.EOF, .value = "EOF" },
+    };
+
+    var cursor: usize = 0;
+    const expr = try expression(&tokens, &cursor, 0);
+
+    try testing.expect(expr == .binary);
+    try testing.expect(expr.binary.ll.atomic.items.len == 2);
+    try testing.expect(std.mem.eql(u8, expr.binary.ll.atomic.items[0], "hello"));
+    try testing.expect(std.mem.eql(u8, expr.binary.ll.atomic.items[1], "world"));
+    try testing.expect(expr.binary.rr.atomic.items.len == 2);
+    try testing.expect(std.mem.eql(u8, expr.binary.rr.atomic.items[0], "foo"));
+    try testing.expect(std.mem.eql(u8, expr.binary.rr.atomic.items[1], "bar"));
+
+    expr.binary.ll.atomic.deinit();
+    expr.binary.rr.atomic.deinit();
+    heap_allocator.destroy(expr.binary.ll);
+    heap_allocator.destroy(expr.binary.rr);
+}
+
+test "parse empty token array" {
+    var tokens = [_]Token{
+        Token{ .kind = TokenKind.EOF, .value = "EOF" },
+    };
+
+    var cursor: usize = 0;
+    const expr = try expression(&tokens, &cursor, 0);
+
+    try testing.expect(expr == .atomic);
+    try testing.expect(expr.atomic.items.len == 0);
+
+    expr.atomic.deinit();
+}
+
+test "infix with unknown operator returns UnknownOperator error" {
+    var left_expr = Expr{ .atomic = std.ArrayList([]const u8).init(heap_allocator) };
+    try left_expr.atomic.append("test");
+
+    const fake_token = Token{ .kind = TokenKind.Atomic, .value = "invalid" };
+    var tokens = [_]Token{
+        Token{ .kind = TokenKind.Atomic, .value = "right" },
+        Token{ .kind = TokenKind.EOF, .value = "EOF" },
+    };
+    var cursor: usize = 0;
+
+    const result = infix(&tokens, &cursor, left_expr, fake_token, 1);
+    try testing.expectError(ParseError.UnknownOperator, result);
+
+    left_expr.atomic.deinit();
+}
+
+test "parse with cursor beyond token array bounds" {
+    var tokens = [_]Token{
+        Token{ .kind = TokenKind.Atomic, .value = "test" },
+        Token{ .kind = TokenKind.EOF, .value = "EOF" },
+    };
+
+    var cursor: usize = 10;
+    const expr = try expression(&tokens, &cursor, 0);
+
+    try testing.expect(expr == .atomic);
+    try testing.expect(expr.atomic.items.len == 0);
+    try testing.expect(cursor == 10);
+
+    expr.atomic.deinit();
+}
+
+test "primary with no atomic tokens" {
+    var tokens = [_]Token{
+        Token{ .kind = TokenKind.Land, .value = "&&" },
+        Token{ .kind = TokenKind.EOF, .value = "EOF" },
+    };
+
+    var cursor: usize = 0;
+    const expr = try primary(&tokens, &cursor);
+
+    try testing.expect(expr == .atomic);
+    try testing.expect(expr.atomic.items.len == 0);
+    try testing.expect(cursor == 0);
+
+    expr.atomic.deinit();
+}
