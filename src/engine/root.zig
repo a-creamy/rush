@@ -4,7 +4,6 @@ pub const lexer = @import("lexer.zig");
 pub const parse = @import("parser.zig");
 
 const Expr = parse.Expr;
-const Operator = parse.Operator;
 
 pub fn eval(expr: *Expr) !void {
     return switch (expr.*) {
@@ -20,6 +19,15 @@ pub fn eval(expr: *Expr) !void {
             try child.spawn();
             _ = try child.wait();
         },
-        else => {},
+        .binary => |*binary| {
+            switch (binary.op) {
+                .land => {
+                    eval(binary.ll) catch {
+                        return;
+                    };
+                    try eval(binary.rr);
+                }
+            }
+        }
     };
 }
