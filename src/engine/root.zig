@@ -11,7 +11,7 @@ pub fn eval(expr: *Expr) void {
             const allocator = std.heap.page_allocator;
 
             const args = atomic.toOwnedSlice() catch |err| {
-                std.debug.print("Failed to convert atomic to slice: {}\n", .{err});
+                std.debug.print("flash: Failed to convert atomic to slice: {}\n", .{err});
                 return;
             };
 
