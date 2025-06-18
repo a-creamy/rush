@@ -5,29 +5,45 @@ pub const parse = @import("parser.zig");
 
 const Expr = parse.Expr;
 
-pub fn eval(expr: *Expr) !void {
-    return switch (expr.*) {
+pub fn eval(expr: *Expr) void {
+    switch (expr.*) {
         .atomic => |*atomic| {
             const allocator = std.heap.page_allocator;
-            
-            const args = try atomic.toOwnedSlice();
-            var child = std.process.Child.init(args, allocator);
 
+            const args = atomic.toOwnedSlice() catch |err| {
+                std.debug.print("Failed to convert atomic to slice: {}\n", .{err});
+                return;
+            };
+
+            if (args.len == 0) {
+                return;
+            }
+
+            var child = std.process.Child.init(args, allocator);
             child.stdout_behavior = .Inherit;
             child.stderr_behavior = .Inherit;
 
-            try child.spawn();
-            _ = try child.wait();
+            child.spawn() catch |err| {
+                std.debug.print("flash: Failed to spawn: '{s}' ({})\n", .{args[0], err});
+                return;
+            };
+
+            _ = child.wait() catch |err| switch (err) {
+                error.FileNotFound => {
+                    std.debug.print("flash: Unknown Command: '{s}'\n", .{args[0]});
+                },
+                else => {
+                    std.debug.print("flash: Failed to wait: '{s}' ({})\n", .{args[0], err});
+                }
+            };
         },
         .binary => |*binary| {
             switch (binary.op) {
                 .land => {
-                    eval(binary.ll) catch {
-                        return;
-                    };
-                    try eval(binary.rr);
-                }
+                    eval(binary.ll);
+                    eval(binary.rr);
+                },
             }
-        }
-    };
+        },
+    }
 }

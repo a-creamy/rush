@@ -37,6 +37,6 @@ pub fn run() !void {
         var cursor: usize = 0;
         var expr = try parse.expression(result.items, &cursor, 0);
 
-        try engine.eval(&expr);
+        engine.eval(&expr);
     }
 }
