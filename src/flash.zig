@@ -32,11 +32,15 @@ pub fn run() !void {
         var buf: [1024]u8 = undefined;
         const input = try shell.ask(&buf);
 
-        const result = lexer.lex(input) catch null;
+        const result = lexer.lex(input) catch {
+            return;
+        };
 
         var cursor: usize = 0;
-        var expr = parse.expression(result.?.items, &cursor, 0) catch null;
+        var expr = parse.expression(result.items, &cursor, 0) catch {
+            return;
+        };
 
-        engine.eval(&expr.?);
+        engine.eval(&expr);
     }
 }
