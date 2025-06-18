@@ -5,14 +5,13 @@ pub const parse = @import("parser.zig");
 
 const Expr = parse.Expr;
 
-pub fn eval(expr: *Expr) void {
+pub fn eval(expr: *Expr) anyerror!void {
     switch (expr.*) {
         .atomic => |*atomic| {
             const allocator = std.heap.page_allocator;
 
             const args = atomic.toOwnedSlice() catch |err| {
-                std.debug.print("flash: Failed to convert atomic to slice: {}\n", .{err});
-                return;
+                return err;
             };
 
             if (args.len == 0) {
@@ -24,24 +23,18 @@ pub fn eval(expr: *Expr) void {
             child.stderr_behavior = .Inherit;
 
             child.spawn() catch |err| {
-                std.debug.print("flash: Failed to spawn: '{s}' ({})\n", .{args[0], err});
-                return;
+                return err;
             };
 
-            _ = child.wait() catch |err| switch (err) {
-                error.FileNotFound => {
-                    std.debug.print("flash: Unknown Command: '{s}'\n", .{args[0]});
-                },
-                else => {
-                    std.debug.print("flash: Failed to wait: '{s}' ({})\n", .{args[0], err});
-                }
+            _ = child.wait() catch |err| {
+                return err;
             };
         },
         .binary => |*binary| {
             switch (binary.op) {
                 .land => {
-                    eval(binary.ll);
-                    eval(binary.rr);
+                    try eval(binary.ll);
+                    try eval(binary.rr);
                 },
             }
         },

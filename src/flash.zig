@@ -32,15 +32,19 @@ pub fn run() !void {
         var buf: [1024]u8 = undefined;
         const input = try shell.ask(&buf);
 
-        const result = lexer.lex(input) catch {
-            return;
+        const result = lexer.lex(input) catch |err| {
+            std.debug.print("flash: Error: {}\n", .{err});
+            continue;
         };
 
         var cursor: usize = 0;
-        var expr = parse.expression(result.items, &cursor, 0) catch {
-            return;
+        var expr = parse.expression(result.items, &cursor, 0) catch |err| {
+            std.debug.print("flash: Error: {}\n", .{err});
+            continue;
         };
 
-        engine.eval(&expr);
+        engine.eval(&expr) catch |err| {
+            std.debug.print("flash: Error: {}\n", .{err});
+        };
     }
 }

@@ -72,7 +72,6 @@ fn infix(tokens: []Token, cursor: *usize, left: Expr, token: Token, precedence: 
     return switch (token.kind) {
         TokenKind.Land => Expr{ .binary = Binary{ .op = Operator.land, .ll = ll, .rr = rr } },
         else => {
-            std.debug.print("flash: Unknown Operator: '{}'", .{token.kind});
             return error.UnknownOperator;
         },
     };
