@@ -35,16 +35,8 @@ pub fn run() !void {
         const result = lexer.lex(input) catch null;
 
         var cursor: usize = 0;
-        var expr = parse.expression(result.?.items, &cursor, 0) catch |err| switch (err) {
-            error.OutOfMemory => {
-                std.debug.print("flash: Out of memory", .{});
-                return;
-            },
-            else => {
-                return;
-            },
-        };
+        var expr = parse.expression(result.?.items, &cursor, 0) catch null;
 
-        engine.eval(&expr);
+        engine.eval(&expr.?);
     }
 }

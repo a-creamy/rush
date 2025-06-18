@@ -26,12 +26,7 @@ pub const Expr = union(Type) {
     binary: Binary,
 };
 
-const ParseError = error{
-    UnknownOperator,
-    OutOfMemory,
-};
-
-pub fn expression(tokens: []Token, cursor: *usize, precedence: u8) ParseError!Expr {
+pub fn expression(tokens: []Token, cursor: *usize, precedence: u8) anyerror!Expr {
     var left = try primary(tokens, cursor);
 
     while (cursor.* < tokens.len) {
@@ -50,7 +45,7 @@ pub fn expression(tokens: []Token, cursor: *usize, precedence: u8) ParseError!Ex
     return left;
 }
 
-fn primary(tokens: []Token, cursor: *usize) ParseError!Expr {
+fn primary(tokens: []Token, cursor: *usize) anyerror!Expr {
     var i = cursor.*;
 
     while (i < tokens.len and tokens[i].kind == TokenKind.Atomic) : (i += 1) {}
@@ -66,7 +61,7 @@ fn primary(tokens: []Token, cursor: *usize) ParseError!Expr {
     return Expr{ .atomic = result };
 }
 
-fn infix(tokens: []Token, cursor: *usize, left: Expr, token: Token, precedence: u8) ParseError!Expr {
+fn infix(tokens: []Token, cursor: *usize, left: Expr, token: Token, precedence: u8) anyerror!Expr {
     const right = try expression(tokens, cursor, precedence + 1);
 
     const ll = try heap_allocator.create(Expr);
@@ -180,7 +175,7 @@ test "infix with unknown operator returns UnknownOperator error" {
     var cursor: usize = 0;
 
     const result = infix(&tokens, &cursor, left_expr, fake_token, 1);
-    try testing.expectError(ParseError.UnknownOperator, result);
+    try testing.expectError(error.UnknownOperator, result);
 
     left_expr.atomic.deinit();
 }
