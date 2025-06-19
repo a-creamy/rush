@@ -53,7 +53,16 @@ pub fn lex(source: []u8) !std.ArrayList(Token) {
             },
             ' ', '\n', '\t' => start += 1,
             else => {
-                return error.InvalidChar;
+                const i = start;
+                while (start < source.len and
+                    ((source[start] >= 'a' and source[start] <= 'z') or
+                        (source[start] >= 'A' and source[start] <= 'Z') or
+                        (source[start] >= '0' and source[start] <= '9') or
+                        source[start] == '_' or source[start] == '-' or source[start] == '.' or source[start] == '/'))
+                {
+                    start += 1;
+                }
+                try tokens.append(Token{ .kind = TokenKind.Atomic, .value = source[i..start] });
             },
         }
     }
