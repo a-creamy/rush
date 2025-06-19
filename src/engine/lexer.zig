@@ -25,16 +25,6 @@ pub fn lex(source: []u8) !std.ArrayList(Token) {
         const current = source[start];
 
         switch (current) {
-            'a'...'z', 'A'...'Z' => {
-                const i = start;
-                while (start < source.len and
-                    ((source[start] >= 'a' and source[start] <= 'z') or
-                        (source[start] >= 'A' and source[start] <= 'Z')))
-                {
-                    start += 1;
-                }
-                try tokens.append(Token{ .kind = TokenKind.Atomic, .value = source[i..start] });
-            },
             '&' => {
                 if (start + 1 < source.len and source[start + 1] == '&') {
                     try tokens.append(Token{ .kind = TokenKind.LogicalAnd, .value = source[start .. start + 2] });
