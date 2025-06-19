@@ -35,7 +35,7 @@ pub fn expression(tokens: []Token, cursor: *usize, precedence: u8) anyerror!Expr
         const token = tokens[cursor.*];
         const token_precedence = get_precedence(token.kind);
 
-        if (token_precedence < precedence or token.kind == TokenKind.EOF) {
+        if (token_precedence < precedence or token_precedence == 0) {
             break;
         }
 

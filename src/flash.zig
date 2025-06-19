@@ -33,18 +33,18 @@ pub fn run() !void {
         const input = try shell.ask(&buf);
 
         const result = lexer.lex(input) catch |err| {
-            std.debug.print("flash: l{}\n", .{err});
+            std.debug.print("flash: {}\n", .{err});
             continue;
         };
 
         var cursor: usize = 0;
         var expr = parse.expression(result.items, &cursor, 0) catch |err| {
-            std.debug.print("flash: p{}\n", .{err});
+            std.debug.print("flash: {}\n", .{err});
             continue;
         };
 
         engine.eval(&expr) catch |err| {
-            std.debug.print("flash: e{}\n", .{err});
+            std.debug.print("flash: {}\n", .{err});
         };
     }
 }

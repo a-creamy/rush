@@ -1,9 +1,5 @@
 const std = @import("std");
 
-var buffer: [1000]u8 = undefined;
-var fba = std.heap.FixedBufferAllocator.init(&buffer);
-const allocator = fba.allocator();
-
 pub const TokenKind = enum {
     Atomic,
     LogicalAnd,
@@ -18,6 +14,10 @@ pub const Token = struct {
 };
 
 pub fn lex(source: []u8) !std.ArrayList(Token) {
+    var buffer: [1000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
+
     var tokens = std.ArrayList(Token).init(allocator);
 
     var start: usize = 0;
