@@ -3,13 +3,12 @@ const std = @import("std");
 pub const lexer = @import("lexer.zig");
 pub const parse = @import("parser.zig");
 
+const allocator = std.heap.page_allocator;
 const Expr = parse.Expr;
 
 pub fn eval(expr: *Expr) anyerror!void {
     switch (expr.*) {
         .atomic => |*atomic| {
-            const allocator = std.heap.page_allocator;
-
             const args = atomic.toOwnedSlice() catch |err| {
                 return err;
             };
@@ -44,6 +43,8 @@ pub fn eval(expr: *Expr) anyerror!void {
                     eval(binary.ll) catch {
                         try eval(binary.rr);
                     };
+                },
+                .Pipe => {
                 },
             }
         },

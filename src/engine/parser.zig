@@ -9,6 +9,7 @@ const heap_allocator = std.heap.page_allocator;
 pub const Operator = enum {
     LogicalAnd,
     LogicalOr,
+    Pipe,
 };
 
 const Binary = struct {
@@ -73,6 +74,7 @@ fn infix(tokens: []Token, cursor: *usize, left: Expr, token: Token, precedence: 
     return switch (token.kind) {
         TokenKind.LogicalAnd => Expr{ .binary = Binary{ .op = Operator.LogicalAnd, .ll = ll, .rr = rr } },
         TokenKind.LogicalOr => Expr{ .binary = Binary{ .op = Operator.LogicalOr, .ll = ll, .rr = rr } },
+        TokenKind.Pipe => Expr{ .binary = Binary{ .op = Operator.Pipe, .ll = ll, .rr = rr } },
         else => {
             return error.UnknownOperator;
         },
@@ -83,5 +85,6 @@ fn get_precedence(kind: TokenKind) u8 {
     return switch (kind) {
         TokenKind.EOF, TokenKind.Atomic => 0,
         TokenKind.LogicalAnd, TokenKind.LogicalOr => 3,
+        TokenKind.Pipe => 4,
     };
 }

@@ -8,6 +8,7 @@ pub const TokenKind = enum {
     Atomic,
     LogicalAnd,
     LogicalOr,
+    Pipe,
     EOF,
 };
 
@@ -47,7 +48,7 @@ pub fn lex(source: []u8) !std.ArrayList(Token) {
                     try tokens.append(Token{ .kind = TokenKind.LogicalOr, .value = source[start .. start + 2] });
                     start += 2;
                 } else {
-                    return error.InvalidChar;
+                    try tokens.append(Token{ .kind = TokenKind.Pipe, .value = source[start .. start + 1] });
                 }
             },
             ' ', '\n', '\t' => start += 1,
