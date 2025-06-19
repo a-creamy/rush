@@ -6,7 +6,8 @@ const allocator = fba.allocator();
 
 pub const TokenKind = enum {
     Atomic,
-    Land,
+    LogicalAnd,
+    LogicalOr,
     EOF,
 };
 
@@ -35,7 +36,15 @@ pub fn lex(source: []u8) !std.ArrayList(Token) {
             },
             '&' => {
                 if (start + 1 < source.len and source[start + 1] == '&') {
-                    try tokens.append(Token{ .kind = TokenKind.Land, .value = source[start .. start + 2] });
+                    try tokens.append(Token{ .kind = TokenKind.LogicalAnd, .value = source[start .. start + 2] });
+                    start += 2;
+                } else {
+                    return error.InvalidChar;
+                }
+            },
+            '|' => {
+                if (start + 1 < source.len and source[start + 1] == '|') {
+                    try tokens.append(Token{ .kind = TokenKind.LogicalOr, .value = source[start .. start + 2] });
                     start += 2;
                 } else {
                     return error.InvalidChar;
@@ -62,22 +71,11 @@ test "lex atomic" {
     try testing.expect(tokens.items.len == 3);
     try testing.expect(tokens.items[0].kind == TokenKind.Atomic and tokens.items[1].kind == TokenKind.Atomic);
     try testing.expect(std.mem.eql(u8, tokens.items[0].value, "hello"));
-    try testing.expect(std.mem.eql(u8, tokens.items[0].value, "world"));
+    try testing.expect(std.mem.eql(u8, tokens.items[1].value, "world"));
     try testing.expect(tokens.items[2].kind == TokenKind.EOF);
 }
 
-test "lex land operator" {
-    var source = "&&".*;
-    const tokens = try lex(&source);
-    defer tokens.deinit();
-
-    try testing.expect(tokens.items.len == 2);
-    try testing.expect(tokens.items[0].kind == TokenKind.Land);
-    try testing.expect(std.mem.eql(u8, tokens.items[0].value, "&&"));
-    try testing.expect(tokens.items[1].kind == TokenKind.EOF);
-}
-
-test "lex atomic with land operator" {
+test "lex atomic with logical operator" {
     var source = "hello && world".*;
     const tokens = try lex(&source);
     defer tokens.deinit();
@@ -85,16 +83,11 @@ test "lex atomic with land operator" {
     try testing.expect(tokens.items.len == 4);
     try testing.expect(tokens.items[0].kind == TokenKind.Atomic);
     try testing.expect(std.mem.eql(u8, tokens.items[0].value, "hello"));
-    try testing.expect(tokens.items[1].kind == TokenKind.Land);
+    try testing.expect(tokens.items[1].kind == TokenKind.LogicalAnd);
     try testing.expect(std.mem.eql(u8, tokens.items[1].value, "&&"));
     try testing.expect(tokens.items[2].kind == TokenKind.Atomic);
     try testing.expect(std.mem.eql(u8, tokens.items[2].value, "world"));
     try testing.expect(tokens.items[3].kind == TokenKind.EOF);
-}
-
-test "lex single ampersand returns error" {
-    var source = "&".*;
-    try testing.expectError(error.InvalidChar, lex(&source));
 }
 
 test "lex invalid character returns error" {

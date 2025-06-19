@@ -26,15 +26,24 @@ pub fn eval(expr: *Expr) anyerror!void {
                 return err;
             };
 
-            _ = child.wait() catch |err| {
+            const result = child.wait() catch |err| {
                 return err;
             };
+
+            if (result.Exited != 0) {
+                return error.CommandFail;
+            }
         },
         .binary => |*binary| {
             switch (binary.op) {
-                .land => {
+                .LogicalAnd => {
                     try eval(binary.ll);
                     try eval(binary.rr);
+                },
+                .LogicalOr => {
+                    eval(binary.ll) catch {
+                        try eval(binary.rr);
+                    };
                 },
             }
         },
