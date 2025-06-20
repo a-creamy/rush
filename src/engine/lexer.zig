@@ -39,6 +39,7 @@ pub fn lex(source: []u8) !std.ArrayList(Token) {
                     start += 2;
                 } else {
                     try tokens.append(Token{ .kind = TokenKind.Pipe, .value = source[start .. start + 1] });
+                    start += 1;
                 }
             },
             ' ', '\n', '\t' => start += 1,
