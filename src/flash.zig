@@ -46,7 +46,7 @@ pub fn run() !void {
         };
 
         engine.eval(&expr) catch |err| {
-            std.debug.print("flash: Eval: r{}\n", .{err});
+            std.debug.print("flash: Eval: {}\n", .{err});
         };
     }
 }

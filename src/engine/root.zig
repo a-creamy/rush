@@ -47,7 +47,6 @@ pub fn eval(expr: *Expr) anyerror!void {
                 .Pipe => {
                     const fd = try std.posix.pipe();
 
-                    std.debug.print("binary.ll: {?*}\n", .{binary.ll});
                     const first_command = try extract_args(binary.ll);
                     const second_command = try extract_args(binary.rr);
 

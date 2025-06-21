@@ -10,10 +10,10 @@ pub const TokenKind = enum {
 
 pub const Token = struct {
     kind: TokenKind,
-    value: []u8,
+    value: []const u8,
 };
 
-pub fn lex(allocator: std.mem.Allocator, source: []u8) !std.ArrayList(Token) {
+pub fn lex(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList(Token) {
     var tokens = std.ArrayList(Token).init(allocator);
 
     var start: usize = 0;
