@@ -65,10 +65,10 @@ pub fn eval(expr: *Expr) anyerror!void {
 
 fn extract_args(expr: ?*const Expr) ![][]const u8 {
     if (expr) |e| {
-    switch (e.*) {
-        .atomic => |*atomic| return try atomic.*.toOwnedSlice(),
-        else => return error.ExpectedAtomic,
-    }
+        switch (e.*) {
+            .atomic => |*atomic| return try atomic.*.toOwnedSlice(),
+            else => return error.ExpectedAtomic,
+        }
     } else {
         return error.NullPtr;
     }
