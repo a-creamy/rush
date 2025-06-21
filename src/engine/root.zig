@@ -9,7 +9,7 @@ const Expr = parse.Expr;
 pub fn eval(expr: *Expr) anyerror!void {
     switch (expr.*) {
         .atomic => |*atomic| {
-            const args = atomic.toOwnedSlice() catch |err| {
+            const args = atomic.*.toOwnedSlice() catch |err| {
                 return err;
             };
 
@@ -45,8 +45,53 @@ pub fn eval(expr: *Expr) anyerror!void {
                     };
                 },
                 .Pipe => {
+                    const fd = try std.posix.pipe();
+
+                    std.debug.print("binary.ll: {?*}\n", .{binary.ll});
+                    const first_command = try extract_args(binary.ll);
+                    const second_command = try extract_args(binary.rr);
+
+                    const pid = try std.posix.fork();
+                    switch (pid) {
+                        0 => {
+                            try runPipe(fd, first_command, second_command);
+                        },
+                        else => {},
+                    }
                 },
             }
+        },
+    }
+}
+
+fn extract_args(expr: ?*const Expr) ![][]const u8 {
+    if (expr) |e| {
+    switch (e.*) {
+        .atomic => |*atomic| return try atomic.*.toOwnedSlice(),
+        else => return error.ExpectedAtomic,
+    }
+    } else {
+        return error.NullPtr;
+    }
+}
+
+fn runPipe(pfd: [2]i32, first_command: [][]const u8, second_command: [][]const u8) !void {
+    const pid = try std.posix.fork();
+
+    switch (pid) {
+        0 => {
+            // Child process for the first command
+            try std.posix.dup2(pfd[1], 1); // Redirect stdout to the pipe
+            std.posix.close(pfd[0]); // Close unused read end
+            // Execute the first command passed from main
+            std.process.execve(allocator, first_command, null) catch {};
+        },
+        else => {
+            // Child process for the second command
+            try std.posix.dup2(pfd[0], 0); // Redirect stdin from the pipe
+            std.posix.close(pfd[1]); // Close unused write end
+            // Execute the second command passed from main
+            std.process.execve(allocator, second_command, null) catch {};
         },
     }
 }

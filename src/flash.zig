@@ -29,22 +29,24 @@ pub fn run() !void {
     const shell = Shell.new("> ");
 
     while (true) {
+        const allocator = std.heap.page_allocator;
+
         var buf: [1024]u8 = undefined;
         const input = try shell.ask(&buf);
 
-        const result = lexer.lex(input) catch |err| {
-            std.debug.print("flash: {}\n", .{err});
+        const result = lexer.lex(allocator, input) catch |err| {
+            std.debug.print("flash: Lexer: {}\n", .{err});
             continue;
         };
 
         var cursor: usize = 0;
         var expr = parse.expression(result.items, &cursor, 0) catch |err| {
-            std.debug.print("flash: {}\n", .{err});
+            std.debug.print("flash: Parser: {}\n", .{err});
             continue;
         };
 
         engine.eval(&expr) catch |err| {
-            std.debug.print("flash: {}\n", .{err});
+            std.debug.print("flash: Eval: r{}\n", .{err});
         };
     }
 }

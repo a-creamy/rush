@@ -1,4 +1,5 @@
 const std = @import("std");
+const activeTag = std.meta.activeTag;
 const lexer = @import("lexer.zig");
 
 const TokenKind = lexer.TokenKind;
@@ -24,8 +25,49 @@ const Type = enum {
 };
 
 pub const Expr = union(Type) {
-    atomic: std.ArrayList([]const u8),
+    atomic: *std.ArrayList([]const u8),
     binary: Binary,
+
+    pub fn deinit(self: *Expr, allocator: std.mem.Allocator) void {
+        switch (self.*) {
+            .atomic => |list| {
+                list.deinit();
+            },
+            .binary => |b| {
+                b.ll.deinit(allocator);
+                b.rr.deinit(allocator);
+                allocator.destroy(b.ll);
+                allocator.destroy(b.rr);
+            },
+        }
+        allocator.destroy(self);
+    }
+
+    pub fn clone(self: *const Expr) !Expr {
+        switch (self.*) {
+            .atomic => |*atomic| {
+                const new_atomic = try heap_allocator.create(std.ArrayList([]const u8));
+                new_atomic.* = try atomic.*.clone();
+                return Expr{ .atomic = new_atomic };
+            },
+            .binary => |binary| {
+                const ll = try heap_allocator.create(Expr);
+
+                const rr = try heap_allocator.create(Expr);
+
+                ll.* = try binary.ll.clone();
+                rr.* = try binary.rr.clone();
+
+                return Expr{
+                    .binary = Binary{
+                        .op = binary.op,
+                        .ll = ll,
+                        .rr = rr,
+                    },
+                };
+            },
+        }
+    }
 };
 
 pub fn expression(tokens: []Token, cursor: *usize, precedence: u8) anyerror!Expr {
@@ -50,9 +92,12 @@ pub fn expression(tokens: []Token, cursor: *usize, precedence: u8) anyerror!Expr
 fn primary(tokens: []Token, cursor: *usize) anyerror!Expr {
     var i = cursor.*;
 
-    while (i < tokens.len and tokens[i].kind == TokenKind.Atomic) : (i += 1) {}
+    while (i < tokens.len and tokens[i].kind == TokenKind.Atomic) {
+        i += 1;
+    }
 
-    var result = std.ArrayList([]const u8).init(heap_allocator);
+    var result = try heap_allocator.create(std.ArrayList([]const u8));
+    result.* = std.ArrayList([]const u8).init(heap_allocator);
 
     for (tokens[cursor.*..i]) |token| {
         try result.append(token.value);
@@ -67,9 +112,11 @@ fn infix(tokens: []Token, cursor: *usize, left: Expr, token: Token, precedence: 
     const right = try expression(tokens, cursor, precedence + 1);
 
     const ll = try heap_allocator.create(Expr);
+
     const rr = try heap_allocator.create(Expr);
-    ll.* = left;
-    rr.* = right;
+
+    ll.* = try left.clone();
+    rr.* = try right.clone();
 
     return switch (token.kind) {
         TokenKind.LogicalAnd => Expr{ .binary = Binary{ .op = Operator.LogicalAnd, .ll = ll, .rr = rr } },

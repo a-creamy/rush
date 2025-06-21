@@ -13,11 +13,7 @@ pub const Token = struct {
     value: []u8,
 };
 
-pub fn lex(source: []u8) !std.ArrayList(Token) {
-    var buffer: [1000]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    const allocator = fba.allocator();
-
+pub fn lex(allocator: std.mem.Allocator, source: []u8) !std.ArrayList(Token) {
     var tokens = std.ArrayList(Token).init(allocator);
 
     var start: usize = 0;
