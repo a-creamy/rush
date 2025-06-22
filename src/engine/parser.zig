@@ -133,3 +133,29 @@ fn get_precedence(kind: TokenKind) u8 {
         TokenKind.Pipe => 4,
     };
 }
+
+test "Parse Atomic" {
+    const allocator = std.testing.allocator;
+
+    const tokens = try lexer.lex(allocator, "echo Hello World");
+
+    var cursor: usize = 0;
+    const expr = try expression(tokens.items, allocator, &cursor, 0);
+
+    var list = std.ArrayList([]const u8).init(allocator);
+    defer list.deinit();
+
+    try list.append("echo");
+    try list.append("Hello");
+    try list.append("World");
+
+    const expected_expr = Expr{
+        .atomic = &list,
+    };
+
+    try std.testing.expect(expected_expr.atomic.items.len == expr.atomic.items.len);
+
+    for (0..expr.atomic.items.len) |i| {
+        try std.testing.expect(std.mem.eql(u8, expected_expr.atomic.*.items[i], expr.atomic.*.items[i]));
+    }
+}
