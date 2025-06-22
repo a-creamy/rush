@@ -13,7 +13,7 @@ pub const Token = struct {
     value: []const u8,
 };
 
-pub fn lex(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList(Token) {
+pub fn lex(source: []const u8, allocator: std.mem.Allocator) !std.ArrayList(Token) {
     var tokens = std.ArrayList(Token).init(allocator);
 
     var index: usize = 0;
@@ -60,7 +60,7 @@ pub fn lex(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList(Toke
 
 test "Lex Atomic" {
     const allocator = std.testing.allocator;
-    const tokens = try lex(allocator, "echo Hello World");
+    const tokens = try lex("echo Hello World", allocator);
     defer tokens.deinit();
 
     var expected_tokens = std.ArrayList(Token).init(allocator);
@@ -81,7 +81,7 @@ test "Lex Atomic" {
 
 test "Lex Single Char Operator" {
     const allocator = std.testing.allocator;
-    const tokens = try lex(allocator, "ls | grep a");
+    const tokens = try lex("ls | grep a", allocator);
     defer tokens.deinit();
 
     var expected_tokens = std.ArrayList(Token).init(allocator);
@@ -103,7 +103,7 @@ test "Lex Single Char Operator" {
 
 test "Lex Double Char Operator" {
     const allocator = std.testing.allocator;
-    const tokens = try lex(allocator, "ls || grep a");
+    const tokens = try lex("ls || grep a", allocator);
     defer tokens.deinit();
 
     var expected_tokens = std.ArrayList(Token).init(allocator);
@@ -125,7 +125,7 @@ test "Lex Double Char Operator" {
 
 test "Lex Multiple Operator's" {
     const allocator = std.testing.allocator;
-    const tokens = try lex(allocator, "ls | grep a | tr a-z A-Z || echo Failed");
+    const tokens = try lex("ls | grep a | tr a-z A-Z || echo Failed", allocator);
     defer tokens.deinit();
 
     var expected_tokens = std.ArrayList(Token).init(allocator);

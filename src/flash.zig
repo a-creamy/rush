@@ -34,14 +34,14 @@ pub fn run() !void {
         var buf: [1024]u8 = undefined;
         const input = try shell.ask(&buf);
 
-        const result = lexer.lex(allocator, input) catch |err| {
+        const result = lexer.lex(input, allocator) catch |err| {
             std.debug.print("flash: Lexer: {}\n", .{err});
             continue;
         };
         defer result.deinit();
 
         var cursor: usize = 0;
-        var expr = parse.expression(result.items, allocator, &cursor, 0) catch |err| {
+        var expr = parse.expression(result.items, &cursor, 0, allocator) catch |err| {
             std.debug.print("flash: Parser: {}\n", .{err});
             continue;
         };

@@ -67,8 +67,8 @@ pub const Expr = union(Type) {
     }
 };
 
-pub fn expression(tokens: []Token, allocator: std.mem.Allocator, cursor: *usize, precedence: u8) anyerror!Expr {
-    var left = try primary(tokens, allocator, cursor);
+pub fn expression(tokens: []Token, cursor: *usize, precedence: u8, allocator: std.mem.Allocator) anyerror!Expr {
+    var left = try primary(tokens, cursor, allocator);
 
     while (cursor.* < tokens.len) {
         const token = tokens[cursor.*];
@@ -80,13 +80,13 @@ pub fn expression(tokens: []Token, allocator: std.mem.Allocator, cursor: *usize,
 
         cursor.* += 1;
 
-        left = try infix(tokens, allocator, cursor, left, token, token_precedence);
+        left = try infix(tokens, cursor, left, token, token_precedence, allocator);
     }
 
     return left;
 }
 
-fn primary(tokens: []Token, allocator: std.mem.Allocator, cursor: *usize) anyerror!Expr {
+fn primary(tokens: []Token, cursor: *usize, allocator: std.mem.Allocator) anyerror!Expr {
     var i = cursor.*;
 
     while (i < tokens.len and tokens[i].kind == TokenKind.Atomic) {
@@ -104,8 +104,8 @@ fn primary(tokens: []Token, allocator: std.mem.Allocator, cursor: *usize) anyerr
     return Expr{ .atomic = result };
 }
 
-fn infix(tokens: []Token, allocator: std.mem.Allocator, cursor: *usize, left: Expr, token: Token, precedence: u8) anyerror!Expr {
-    const right = try expression(tokens, allocator, cursor, precedence + 1);
+fn infix(tokens: []Token, cursor: *usize, left: Expr, token: Token, precedence: u8, allocator: std.mem.Allocator) anyerror!Expr {
+    const right = try expression(tokens, cursor, precedence + 1, allocator);
 
     const ll = try allocator.create(Expr);
 
@@ -135,11 +135,11 @@ fn get_precedence(kind: TokenKind) u8 {
 test "Parse Atomic" {
     const allocator = std.testing.allocator;
 
-    const tokens = try lexer.lex(allocator, "echo Hello World");
+    const tokens = try lexer.lex("echo Hello World", allocator);
     defer tokens.deinit();
 
     var cursor: usize = 0;
-    var expr = try expression(tokens.items, allocator, &cursor, 0);
+    var expr = try expression(tokens.items, &cursor, 0, allocator);
     defer expr.deinit(allocator);
 
     var list = std.ArrayList([]const u8).init(allocator);
