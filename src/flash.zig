@@ -38,6 +38,7 @@ pub fn run() !void {
             std.debug.print("flash: Lexer: {}\n", .{err});
             continue;
         };
+        defer result.deinit();
 
         var cursor: usize = 0;
         var expr = parse.expression(result.items, &cursor, 0) catch |err| {
