@@ -41,7 +41,7 @@ pub fn run() !void {
         defer result.deinit();
 
         var cursor: usize = 0;
-        var expr = parse.expression(result.items, &cursor, 0) catch |err| {
+        var expr = parse.expression(result.items, allocator, &cursor, 0) catch |err| {
             std.debug.print("flash: Parser: {}\n", .{err});
             continue;
         };
