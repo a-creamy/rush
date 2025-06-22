@@ -23,7 +23,7 @@ const Type = enum {
 };
 
 pub const Expr = union(Type) {
-    atomic: *std.ArrayList([]const u8),
+    atomic: std.ArrayList([]const u8),
     binary: Binary,
 
     pub fn deinit(self: *Expr, allocator: std.mem.Allocator) void {
@@ -38,14 +38,13 @@ pub const Expr = union(Type) {
                 allocator.destroy(b.rr);
             },
         }
-        allocator.destroy(self);
     }
 
     pub fn clone(self: *const Expr, allocator: std.mem.Allocator) !Expr {
         switch (self.*) {
             .atomic => |*atomic| {
-                const new_atomic = try allocator.create(std.ArrayList([]const u8));
-                new_atomic.* = try atomic.*.clone();
+                var new_atomic = std.ArrayList([]const u8).init(allocator);
+                new_atomic = try atomic.clone();
                 return Expr{ .atomic = new_atomic };
             },
             .binary => |binary| {
@@ -94,8 +93,7 @@ fn primary(tokens: []Token, allocator: std.mem.Allocator, cursor: *usize) anyerr
         i += 1;
     }
 
-    var result = try allocator.create(std.ArrayList([]const u8));
-    result.* = std.ArrayList([]const u8).init(allocator);
+    var result = std.ArrayList([]const u8).init(allocator);
 
     for (tokens[cursor.*..i]) |token| {
         try result.append(token.value);
@@ -138,9 +136,11 @@ test "Parse Atomic" {
     const allocator = std.testing.allocator;
 
     const tokens = try lexer.lex(allocator, "echo Hello World");
+    defer tokens.deinit();
 
     var cursor: usize = 0;
-    const expr = try expression(tokens.items, allocator, &cursor, 0);
+    var expr = try expression(tokens.items, allocator, &cursor, 0);
+    defer expr.deinit(allocator);
 
     var list = std.ArrayList([]const u8).init(allocator);
     defer list.deinit();
@@ -150,12 +150,12 @@ test "Parse Atomic" {
     try list.append("World");
 
     const expected_expr = Expr{
-        .atomic = &list,
+        .atomic = list,
     };
 
     try std.testing.expect(expected_expr.atomic.items.len == expr.atomic.items.len);
 
     for (0..expr.atomic.items.len) |i| {
-        try std.testing.expect(std.mem.eql(u8, expected_expr.atomic.*.items[i], expr.atomic.*.items[i]));
+        try std.testing.expectEqualStrings(expected_expr.atomic.items[i], expr.atomic.items[i]);
     }
 }

@@ -45,6 +45,7 @@ pub fn run() !void {
             std.debug.print("flash: Parser: {}\n", .{err});
             continue;
         };
+        defer expr.deinit(allocator);
 
         engine.eval(&expr) catch |err| {
             std.debug.print("flash: Eval: {}\n", .{err});
