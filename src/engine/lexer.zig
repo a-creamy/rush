@@ -78,3 +78,77 @@ test "Lex Atomic" {
         try std.testing.expect(expected_tokens.items[i].kind == tokens.items[i].kind);
     }
 }
+
+test "Lex Single Char Operator" {
+    const allocator = std.testing.allocator;
+    const tokens = try lex(allocator, "ls | grep a");
+    defer tokens.deinit();
+
+    var expected_tokens = std.ArrayList(Token).init(allocator);
+    defer expected_tokens.deinit();
+
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "ls" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Pipe, .value = "|" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "grep" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "a" });
+    try expected_tokens.append(Token{ .kind = TokenKind.EOF, .value = "" });
+
+    try std.testing.expect(expected_tokens.items.len == tokens.items.len);
+
+    for (0..tokens.items.len) |i| {
+        try std.testing.expect(std.mem.eql(u8, expected_tokens.items[i].value, tokens.items[i].value));
+        try std.testing.expect(expected_tokens.items[i].kind == tokens.items[i].kind);
+    }
+}
+
+test "Lex Double Char Operator" {
+    const allocator = std.testing.allocator;
+    const tokens = try lex(allocator, "ls || grep a");
+    defer tokens.deinit();
+
+    var expected_tokens = std.ArrayList(Token).init(allocator);
+    defer expected_tokens.deinit();
+
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "ls" });
+    try expected_tokens.append(Token{ .kind = TokenKind.LogicalOr, .value = "||" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "grep" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "a" });
+    try expected_tokens.append(Token{ .kind = TokenKind.EOF, .value = "" });
+
+    try std.testing.expect(expected_tokens.items.len == tokens.items.len);
+
+    for (0..tokens.items.len) |i| {
+        try std.testing.expect(std.mem.eql(u8, expected_tokens.items[i].value, tokens.items[i].value));
+        try std.testing.expect(expected_tokens.items[i].kind == tokens.items[i].kind);
+    }
+}
+
+test "Lex Multiple Operator's" {
+    const allocator = std.testing.allocator;
+    const tokens = try lex(allocator, "ls | grep a | tr a-z A-Z || echo Failed");
+    defer tokens.deinit();
+
+    var expected_tokens = std.ArrayList(Token).init(allocator);
+    defer expected_tokens.deinit();
+
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "ls" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Pipe, .value = "|" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "grep" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "a" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Pipe, .value = "|" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "tr" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "a-z" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "A-Z" });
+    try expected_tokens.append(Token{ .kind = TokenKind.LogicalOr, .value = "||" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "echo" });
+    try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "Failed" });
+
+    try expected_tokens.append(Token{ .kind = TokenKind.EOF, .value = "" });
+
+    try std.testing.expect(expected_tokens.items.len == tokens.items.len);
+
+    for (0..tokens.items.len) |i| {
+        try std.testing.expect(std.mem.eql(u8, expected_tokens.items[i].value, tokens.items[i].value));
+        try std.testing.expect(expected_tokens.items[i].kind == tokens.items[i].kind);
+    }
+}
