@@ -47,7 +47,7 @@ pub fn run() !void {
         };
         defer expr.deinit(allocator);
 
-        engine.eval(&expr) catch |err| {
+        engine.eval(&expr, allocator) catch |err| {
             std.debug.print("flash: Eval: {}\n", .{err});
         };
     }

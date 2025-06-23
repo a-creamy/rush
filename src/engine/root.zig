@@ -3,16 +3,11 @@ const std = @import("std");
 pub const lexer = @import("lexer.zig");
 pub const parse = @import("parser.zig");
 
-const allocator = std.heap.page_allocator;
 const Expr = parse.Expr;
 
-pub fn eval(expr: *Expr) anyerror!void {
+pub fn eval(expr: *Expr, allocator: std.mem.Allocator) anyerror!void {
     switch (expr.*) {
-        .atomic => |*atomic| {
-            const args = atomic.*.toOwnedSlice() catch |err| {
-                return err;
-            };
-
+        .atomic => |args| {
             if (args.len == 0) {
                 return;
             }
@@ -36,12 +31,12 @@ pub fn eval(expr: *Expr) anyerror!void {
         .binary => |*binary| {
             switch (binary.op) {
                 .LogicalAnd => {
-                    try eval(binary.ll);
-                    try eval(binary.rr);
+                    try eval(binary.ll, allocator);
+                    try eval(binary.rr, allocator);
                 },
                 .LogicalOr => {
-                    eval(binary.ll) catch {
-                        try eval(binary.rr);
+                    eval(binary.ll, allocator) catch {
+                        try eval(binary.rr, allocator);
                     };
                 },
                 .Pipe => {
@@ -53,7 +48,7 @@ pub fn eval(expr: *Expr) anyerror!void {
                     const pid = try std.posix.fork();
                     switch (pid) {
                         0 => {
-                            try runPipe(fd, first_command, second_command);
+                            try runPipe(fd, first_command, second_command, allocator);
                         },
                         else => {},
                     }
@@ -66,7 +61,7 @@ pub fn eval(expr: *Expr) anyerror!void {
 fn extract_args(expr: ?*Expr) ![][]const u8 {
     if (expr) |e| {
         switch (e.*) {
-            .atomic => |*atomic| return try atomic.toOwnedSlice(),
+            .atomic => |atomic| return atomic,
             else => return error.ExpectedAtomic,
         }
     } else {
@@ -74,7 +69,7 @@ fn extract_args(expr: ?*Expr) ![][]const u8 {
     }
 }
 
-fn runPipe(pfd: [2]i32, first_command: [][]const u8, second_command: [][]const u8) !void {
+fn runPipe(pfd: [2]i32, first_command: [][]const u8, second_command: [][]const u8, allocator: std.mem.Allocator) !void {
     const pid = try std.posix.fork();
 
     switch (pid) {

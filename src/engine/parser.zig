@@ -23,13 +23,13 @@ const Type = enum {
 };
 
 pub const Expr = union(Type) {
-    atomic: std.ArrayList([]const u8),
+    atomic: [][]const u8,
     binary: Binary,
 
     pub fn deinit(self: *Expr, allocator: std.mem.Allocator) void {
         switch (self.*) {
-            .atomic => |list| {
-                list.deinit();
+            .atomic => |a| {
+                allocator.free(a);
             },
             .binary => |b| {
                 b.ll.deinit(allocator);
@@ -43,8 +43,7 @@ pub const Expr = union(Type) {
     pub fn clone(self: *const Expr, allocator: std.mem.Allocator) !Expr {
         switch (self.*) {
             .atomic => |*atomic| {
-                var new_atomic = std.ArrayList([]const u8).init(allocator);
-                new_atomic = try atomic.clone();
+                const new_atomic = atomic.*;
                 return Expr{ .atomic = new_atomic };
             },
             .binary => |binary| {
@@ -94,6 +93,7 @@ fn primary(tokens: []Token, cursor: *usize, allocator: std.mem.Allocator) anyerr
     }
 
     var result = std.ArrayList([]const u8).init(allocator);
+    defer result.deinit();
 
     for (tokens[cursor.*..i]) |token| {
         try result.append(token.value);
@@ -101,7 +101,7 @@ fn primary(tokens: []Token, cursor: *usize, allocator: std.mem.Allocator) anyerr
 
     cursor.* = i;
 
-    return Expr{ .atomic = result };
+    return Expr{ .atomic = try result.toOwnedSlice() };
 }
 
 fn infix(tokens: []Token, cursor: *usize, left: Expr, token: Token, precedence: u8, allocator: std.mem.Allocator) anyerror!Expr {
@@ -149,13 +149,35 @@ test "Parse Atomic" {
     try list.append("Hello");
     try list.append("World");
 
-    const expected_expr = Expr{
-        .atomic = list,
+    var expected_expr = Expr{
+        .atomic = try list.toOwnedSlice(),
     };
+    defer expected_expr.deinit(allocator);
 
-    try std.testing.expect(expected_expr.atomic.items.len == expr.atomic.items.len);
+    try std.testing.expect(expected_expr.atomic.len == expr.atomic.len);
 
-    for (0..expr.atomic.items.len) |i| {
-        try std.testing.expectEqualStrings(expected_expr.atomic.items[i], expr.atomic.items[i]);
+    for (0..expr.atomic.len) |i| {
+        try std.testing.expectEqualStrings(expected_expr.atomic[i], expr.atomic[i]);
     }
+}
+
+test "Parse a binary" {
+    const allocator = std.testing.allocator;
+
+    const tokens = try lexer.lex("echo Hello World && echo Hi", allocator);
+    defer tokens.deinit();
+
+    var cursor: usize = 0;
+    var expr = try expression(tokens.items, &cursor, 0, allocator);
+    defer expr.deinit(allocator);
+
+    try std.testing.expect(expr.binary.op == Operator.LogicalAnd);
+    try std.testing.expect(expr.binary.ll.atomic.len == 3);
+    try std.testing.expectEqualStrings(expr.binary.ll.atomic[0], "echo");
+    try std.testing.expectEqualStrings(expr.binary.ll.atomic[1], "Hello");
+    try std.testing.expectEqualStrings(expr.binary.ll.atomic[2], "World");
+
+    try std.testing.expect(expr.binary.rr.atomic.len == 2);
+    try std.testing.expectEqualStrings(expr.binary.rr.atomic[0], "echo");
+    try std.testing.expectEqualStrings(expr.binary.rr.atomic[1], "Hi");
 }
