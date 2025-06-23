@@ -94,3 +94,7 @@ fn runPipe(pfd: [2]i32, first_command: [][]const u8, second_command: [][]const u
         },
     }
 }
+
+test {
+    @import("std").testing.refAllDecls(@This());
+}
