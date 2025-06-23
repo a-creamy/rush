@@ -53,6 +53,14 @@ pub fn eval(expr: *Expr, allocator: std.mem.Allocator) anyerror!void {
                         else => {},
                     }
                 },
+                .Separator => {
+                    eval(binary.ll, allocator) catch |err| {
+                        std.debug.print("flash: Eval: {}\n", .{err});
+                    };
+                    eval(binary.rr, allocator) catch |err| {
+                        std.debug.print("flash: Eval: {}\n", .{err});
+                    };
+                },
             }
         },
     }

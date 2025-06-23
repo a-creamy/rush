@@ -8,6 +8,7 @@ const Token = lexer.Token;
 pub const Operator = enum {
     LogicalAnd,
     LogicalOr,
+    Separator,
     Pipe,
 };
 
@@ -118,6 +119,7 @@ fn infix(tokens: []Token, cursor: *usize, left: Expr, token: Token, precedence: 
         TokenKind.LogicalAnd => Expr{ .binary = Binary{ .op = Operator.LogicalAnd, .ll = ll, .rr = rr } },
         TokenKind.LogicalOr => Expr{ .binary = Binary{ .op = Operator.LogicalOr, .ll = ll, .rr = rr } },
         TokenKind.Pipe => Expr{ .binary = Binary{ .op = Operator.Pipe, .ll = ll, .rr = rr } },
+        TokenKind.Separator => Expr{ .binary = Binary{ .op = Operator.Separator, .ll = ll, .rr = rr } },
         else => {
             return error.UnknownOperator;
         },
@@ -127,8 +129,9 @@ fn infix(tokens: []Token, cursor: *usize, left: Expr, token: Token, precedence: 
 fn get_precedence(kind: TokenKind) u8 {
     return switch (kind) {
         TokenKind.EOF, TokenKind.Atomic => 0,
-        TokenKind.LogicalAnd, TokenKind.LogicalOr => 3,
-        TokenKind.Pipe => 4,
+        TokenKind.Separator => 1,
+        TokenKind.LogicalAnd, TokenKind.LogicalOr => 2,
+        TokenKind.Pipe => 3,
     };
 }
 

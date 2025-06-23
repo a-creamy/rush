@@ -5,6 +5,7 @@ pub const TokenKind = enum {
     LogicalAnd,
     LogicalOr,
     Pipe,
+    Separator,
     EOF,
 };
 
@@ -37,6 +38,10 @@ pub fn lex(source: []const u8, allocator: std.mem.Allocator) !std.ArrayList(Toke
                     try tokens.append(Token{ .kind = TokenKind.Pipe, .value = source[index .. index + 1] });
                     index += 1;
                 }
+            },
+            ';' => {
+                try tokens.append(Token{ .kind = TokenKind.Separator, .value = source[index .. index + 1], });
+                index += 1;
             },
             ' ', '\n', '\t' => index += 1,
             else => {
