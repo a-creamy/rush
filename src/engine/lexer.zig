@@ -40,7 +40,10 @@ pub fn lex(source: []const u8, allocator: std.mem.Allocator) !std.ArrayList(Toke
                 }
             },
             ';' => {
-                try tokens.append(Token{ .kind = TokenKind.Separator, .value = source[index .. index + 1], });
+                try tokens.append(Token{
+                    .kind = TokenKind.Separator,
+                    .value = source[index .. index + 1],
+                });
                 index += 1;
             },
             ' ', '\n', '\t' => index += 1,
@@ -64,12 +67,13 @@ pub fn lex(source: []const u8, allocator: std.mem.Allocator) !std.ArrayList(Toke
 }
 
 test "Lex Atomic" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
     const tokens = try lex("echo Hello World", allocator);
-    defer tokens.deinit();
 
     var expected_tokens = std.ArrayList(Token).init(allocator);
-    defer expected_tokens.deinit();
 
     try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "echo" });
     try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "Hello" });
@@ -85,12 +89,13 @@ test "Lex Atomic" {
 }
 
 test "Lex Single Char Operator" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
     const tokens = try lex("ls | grep a", allocator);
-    defer tokens.deinit();
 
     var expected_tokens = std.ArrayList(Token).init(allocator);
-    defer expected_tokens.deinit();
 
     try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "ls" });
     try expected_tokens.append(Token{ .kind = TokenKind.Pipe, .value = "|" });
@@ -107,12 +112,13 @@ test "Lex Single Char Operator" {
 }
 
 test "Lex Double Char Operator" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
     const tokens = try lex("ls || grep a", allocator);
-    defer tokens.deinit();
 
     var expected_tokens = std.ArrayList(Token).init(allocator);
-    defer expected_tokens.deinit();
 
     try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "ls" });
     try expected_tokens.append(Token{ .kind = TokenKind.LogicalOr, .value = "||" });
@@ -129,12 +135,13 @@ test "Lex Double Char Operator" {
 }
 
 test "Lex Multiple Operator's" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
     const tokens = try lex("ls | grep a | tr a-z A-Z || echo Failed", allocator);
-    defer tokens.deinit();
 
     var expected_tokens = std.ArrayList(Token).init(allocator);
-    defer expected_tokens.deinit();
 
     try expected_tokens.append(Token{ .kind = TokenKind.Atomic, .value = "ls" });
     try expected_tokens.append(Token{ .kind = TokenKind.Pipe, .value = "|" });

@@ -27,20 +27,6 @@ pub const Expr = union(Type) {
     atomic: [][]const u8,
     binary: Binary,
 
-    pub fn deinit(self: *Expr, allocator: std.mem.Allocator) void {
-        switch (self.*) {
-            .atomic => |a| {
-                allocator.free(a);
-            },
-            .binary => |b| {
-                b.ll.deinit(allocator);
-                b.rr.deinit(allocator);
-                allocator.destroy(b.ll);
-                allocator.destroy(b.rr);
-            },
-        }
-    }
-
     pub fn clone(self: *const Expr, allocator: std.mem.Allocator) !Expr {
         switch (self.*) {
             .atomic => |*atomic| {
@@ -94,7 +80,6 @@ fn primary(tokens: []Token, cursor: *usize, allocator: std.mem.Allocator) anyerr
     }
 
     var result = std.ArrayList([]const u8).init(allocator);
-    defer result.deinit();
 
     for (tokens[cursor.*..i]) |token| {
         try result.append(token.value);
@@ -136,26 +121,24 @@ fn get_precedence(kind: TokenKind) u8 {
 }
 
 test "Parse Atomic" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
 
     const tokens = try lexer.lex("echo Hello World", allocator);
-    defer tokens.deinit();
 
     var cursor: usize = 0;
-    var expr = try expression(tokens.items, &cursor, 0, allocator);
-    defer expr.deinit(allocator);
+    const expr = try expression(tokens.items, &cursor, 0, allocator);
 
     var list = std.ArrayList([]const u8).init(allocator);
-    defer list.deinit();
 
     try list.append("echo");
     try list.append("Hello");
     try list.append("World");
 
-    var expected_expr = Expr{
+    const expected_expr = Expr{
         .atomic = try list.toOwnedSlice(),
     };
-    defer expected_expr.deinit(allocator);
 
     try std.testing.expect(expected_expr.atomic.len == expr.atomic.len);
 
@@ -165,14 +148,14 @@ test "Parse Atomic" {
 }
 
 test "Parse a binary" {
-    const allocator = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
 
     const tokens = try lexer.lex("echo Hello World && echo Hi", allocator);
-    defer tokens.deinit();
 
     var cursor: usize = 0;
-    var expr = try expression(tokens.items, &cursor, 0, allocator);
-    defer expr.deinit(allocator);
+    const expr = try expression(tokens.items, &cursor, 0, allocator);
 
     try std.testing.expect(expr.binary.op == Operator.LogicalAnd);
     try std.testing.expect(expr.binary.ll.atomic.len == 3);

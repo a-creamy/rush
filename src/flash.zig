@@ -29,7 +29,9 @@ pub fn run() !void {
     const shell = Shell.new("> ");
 
     while (true) {
-        const allocator = std.heap.page_allocator;
+        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+        defer arena.deinit();
+        const allocator = arena.allocator();
 
         var buf: [1024]u8 = undefined;
         const input = try shell.ask(&buf);
@@ -38,14 +40,12 @@ pub fn run() !void {
             std.debug.print("flash: Lexer: {}\n", .{err});
             continue;
         };
-        defer result.deinit();
 
         var cursor: usize = 0;
         var expr = parse.expression(result.items, &cursor, 0, allocator) catch |err| {
             std.debug.print("flash: Parser: {}\n", .{err});
             continue;
         };
-        defer expr.deinit(allocator);
 
         engine.eval(&expr, allocator) catch |err| {
             std.debug.print("flash: Eval: {}\n", .{err});
