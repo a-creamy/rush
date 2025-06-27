@@ -61,6 +61,36 @@ pub fn eval(expr: *Expr, allocator: std.mem.Allocator) anyerror!void {
                         std.debug.print("flash: Eval: {}\n", .{err});
                     };
                 },
+                else => {
+                    return error.UnknownBinaryOperator;
+                }
+            }
+        },
+        .unary => |*unary| {
+            switch (unary.op) {
+                .Background => {
+                    switch (unary.l.*) {
+                        .atomic => |args| {
+                            if (args.len == 0) {
+                                return;
+                            }
+
+                            var child = std.process.Child.init(args, allocator);
+                            child.stdout_behavior = .Inherit;
+                            child.stderr_behavior = .Inherit;
+
+                            child.spawn() catch |err| {
+                                return err;
+                            };
+                        },
+                        else => {
+                            try eval(unary.l, allocator);
+                        },
+                    }
+                },
+                else => {
+                    return error.UnknownUnaryOperator;
+                },
             }
         },
     }

@@ -10,6 +10,12 @@ pub const Operator = enum {
     LogicalOr,
     Separator,
     Pipe,
+    Background,
+};
+
+const Unary = struct {
+    op: Operator,
+    l: *Expr,
 };
 
 const Binary = struct {
@@ -21,11 +27,13 @@ const Binary = struct {
 const Type = enum {
     atomic,
     binary,
+    unary,
 };
 
 pub const Expr = union(Type) {
     atomic: [][]const u8,
     binary: Binary,
+    unary: Unary,
 
     pub fn clone(self: *const Expr, allocator: std.mem.Allocator) !Expr {
         switch (self.*) {
@@ -46,6 +54,18 @@ pub const Expr = union(Type) {
                         .op = binary.op,
                         .ll = ll,
                         .rr = rr,
+                    },
+                };
+            },
+            .unary => |unary| {
+                const l = try allocator.create(Expr);
+
+                l.* = try unary.l.clone(allocator);
+
+                return Expr{
+                    .unary = Unary{
+                        .op = unary.op,
+                        .l = l,
                     },
                 };
             },
@@ -91,30 +111,69 @@ fn primary(tokens: []Token, cursor: *usize, allocator: std.mem.Allocator) anyerr
 }
 
 fn infix(tokens: []Token, cursor: *usize, left: Expr, token: Token, precedence: u8, allocator: std.mem.Allocator) anyerror!Expr {
-    const right = try expression(tokens, cursor, precedence + 1, allocator);
+    switch (token.kind) {
+        TokenKind.LogicalAnd => {
+            const right = try expression(tokens, cursor, precedence + 1, allocator);
 
-    const ll = try allocator.create(Expr);
+            const ll = try allocator.create(Expr);
+            const rr = try allocator.create(Expr);
 
-    const rr = try allocator.create(Expr);
+            ll.* = try left.clone(allocator);
+            rr.* = try right.clone(allocator);
 
-    ll.* = try left.clone(allocator);
-    rr.* = try right.clone(allocator);
+            return Expr{ .binary = Binary{ .op = Operator.LogicalAnd, .ll = ll, .rr = rr } };
+        },
+        TokenKind.LogicalOr => {
+            const right = try expression(tokens, cursor, precedence + 1, allocator);
 
-    return switch (token.kind) {
-        TokenKind.LogicalAnd => Expr{ .binary = Binary{ .op = Operator.LogicalAnd, .ll = ll, .rr = rr } },
-        TokenKind.LogicalOr => Expr{ .binary = Binary{ .op = Operator.LogicalOr, .ll = ll, .rr = rr } },
-        TokenKind.Pipe => Expr{ .binary = Binary{ .op = Operator.Pipe, .ll = ll, .rr = rr } },
-        TokenKind.Separator => Expr{ .binary = Binary{ .op = Operator.Separator, .ll = ll, .rr = rr } },
+            const ll = try allocator.create(Expr);
+            const rr = try allocator.create(Expr);
+
+            ll.* = try left.clone(allocator);
+            rr.* = try right.clone(allocator);
+
+            return Expr{ .binary = Binary{ .op = Operator.LogicalOr, .ll = ll, .rr = rr } };
+        },
+        TokenKind.Pipe => {
+            const right = try expression(tokens, cursor, precedence + 1, allocator);
+
+            const ll = try allocator.create(Expr);
+            const rr = try allocator.create(Expr);
+
+            ll.* = try left.clone(allocator);
+            rr.* = try right.clone(allocator);
+
+            return Expr{ .binary = Binary{ .op = Operator.Pipe, .ll = ll, .rr = rr } };
+        },
+        TokenKind.Separator => {
+            const right = try expression(tokens, cursor, precedence + 1, allocator);
+
+            const ll = try allocator.create(Expr);
+            const rr = try allocator.create(Expr);
+
+            ll.* = try left.clone(allocator);
+            rr.* = try right.clone(allocator);
+
+            return Expr{ .binary = Binary{ .op = Operator.Separator, .ll = ll, .rr = rr } };
+        },
+        TokenKind.Background => {
+            const l = try allocator.create(Expr);
+            l.* = try left.clone(allocator);
+
+            return Expr{
+                .unary = Unary{ .op = Operator.Background, .l = l },
+            };
+        },
         else => {
             return error.UnknownOperator;
         },
-    };
+    }
 }
 
 fn get_precedence(kind: TokenKind) u8 {
     return switch (kind) {
         TokenKind.EOF, TokenKind.Atomic => 0,
-        TokenKind.Separator => 1,
+        TokenKind.Separator, TokenKind.Background => 1,
         TokenKind.LogicalAnd, TokenKind.LogicalOr => 2,
         TokenKind.Pipe => 3,
     };
