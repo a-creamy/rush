@@ -61,9 +61,52 @@ pub fn eval(expr: *Expr, allocator: std.mem.Allocator) anyerror!void {
                         std.debug.print("flash: Eval: {}\n", .{err});
                     };
                 },
+                .RedirectOverwrite => {
+                    switch (binary.ll.*) {
+                        .atomic => |args| {
+                            if (args.len == 0) {
+                                return;
+                            }
+
+                            var child = std.process.Child.init(args, allocator);
+                            child.stdout_behavior = .Pipe;
+                            child.stderr_behavior = .Inherit;
+
+                            child.spawn() catch |err| {
+                                return err;
+                            };
+
+                            const filepath = try extract_args(binary.rr);
+
+                            if (filepath.len == 0) {
+                                return;
+                            }
+
+                            if (child.stdout) |stdout| {
+                                const data = try stdout.readToEndAlloc(allocator, 1024 * 1024);
+
+                                var file = try std.fs.cwd().createFile(filepath[0], .{});
+                                defer file.close();
+
+                                try file.writeAll(data);
+                            }
+
+                            const result = child.wait() catch |err| {
+                                return err;
+                            };
+
+                            if (result.Exited != 0) {
+                                return error.CommandFail;
+                            }
+                        },
+                        else => {
+                            return error.ExpectedAtomic;
+                        },
+                    }
+                },
                 else => {
                     return error.UnknownBinaryOperator;
-                }
+                },
             }
         },
         .unary => |*unary| {

@@ -11,6 +11,7 @@ pub const Operator = enum {
     Separator,
     Pipe,
     Background,
+    RedirectOverwrite,
 };
 
 const Unary = struct {
@@ -164,6 +165,17 @@ fn infix(tokens: []Token, cursor: *usize, left: Expr, token: Token, precedence: 
                 .unary = Unary{ .op = Operator.Background, .l = l },
             };
         },
+        TokenKind.RedirectOverwrite => {
+            const right = try expression(tokens, cursor, precedence + 1, allocator);
+
+            const ll = try allocator.create(Expr);
+            const rr = try allocator.create(Expr);
+
+            ll.* = try left.clone(allocator);
+            rr.* = try right.clone(allocator);
+
+            return Expr{ .binary = Binary{ .op = Operator.RedirectOverwrite, .ll = ll, .rr = rr } };
+        },
         else => {
             return error.UnknownOperator;
         },
@@ -176,6 +188,7 @@ fn get_precedence(kind: TokenKind) u8 {
         TokenKind.Separator, TokenKind.Background => 1,
         TokenKind.LogicalAnd, TokenKind.LogicalOr => 2,
         TokenKind.Pipe => 3,
+        TokenKind.RedirectOverwrite => 4,
     };
 }
 

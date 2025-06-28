@@ -7,6 +7,7 @@ pub const TokenKind = enum {
     Pipe,
     Separator,
     Background,
+    RedirectOverwrite,
     EOF,
 };
 
@@ -46,6 +47,10 @@ pub fn lex(source: []const u8, allocator: std.mem.Allocator) !std.ArrayList(Toke
                     .kind = TokenKind.Separator,
                     .value = source[index .. index + 1],
                 });
+                index += 1;
+            },
+            '>' => {
+                try tokens.append(Token{ .kind = TokenKind.RedirectOverwrite, .value = source[index .. index + 1] });
                 index += 1;
             },
             ' ', '\n', '\t' => index += 1,
