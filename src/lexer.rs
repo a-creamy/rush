@@ -13,6 +13,15 @@ pub fn lex(input: String) -> Vec<Token> {
             ' ' | '\t' | '\n' => {
                 source.next();
             }
+            '&' => {
+                source.next();
+                if let Some(peek) = source.peek() {
+                    if peek.to_owned() == '&' {
+                        tokens.push(Token::LogicalAnd);
+                        source.next();
+                    }
+                }
+            }
             _ => {
                 let mut atomic = String::new();
 
@@ -56,5 +65,21 @@ mod tests {
     fn test_empty() {
         let tokens = lex("".to_string());
         assert!(tokens.is_empty());
+    }
+
+    #[test]
+    fn test_operator() {
+        let tokens = lex("ls && echo Hi".to_string());
+        let mut expected_tokens = Vec::new();
+        expected_tokens.push(Token::Atomic("ls".to_string()));
+        expected_tokens.push(Token::LogicalAnd);
+        expected_tokens.push(Token::Atomic("echo".to_string()));
+        expected_tokens.push(Token::Atomic("Hi".to_string()));
+
+        assert_eq!(tokens.len(), expected_tokens.len());
+
+        for i in 0..tokens.len() {
+            assert_eq!(tokens[i], expected_tokens[i]);
+        }
     }
 }
