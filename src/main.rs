@@ -1,6 +1,5 @@
 pub mod shell;
-pub mod lexer;
-pub mod parser;
+pub mod engine;
 
 fn main() {
     shell::run();
