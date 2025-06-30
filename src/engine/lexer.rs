@@ -1,7 +1,9 @@
 #[derive(Debug, PartialEq)]
 pub enum Token {
     Atomic(String),
+
     LogicalAnd,
+    LogicalOr,
 }
 
 pub fn lex(input: String) -> Vec<Token> {
@@ -18,6 +20,15 @@ pub fn lex(input: String) -> Vec<Token> {
                 if let Some(peek) = source.peek() {
                     if peek.to_owned() == '&' {
                         tokens.push(Token::LogicalAnd);
+                        source.next();
+                    }
+                }
+            }
+            '|' => {
+                source.next();
+                if let Some(peek) = source.peek() {
+                    if peek.to_owned() == '|' {
+                        tokens.push(Token::LogicalOr);
                         source.next();
                     }
                 }

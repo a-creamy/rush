@@ -1,6 +1,6 @@
 use crate::engine;
-use crate::engine::{lexer, parser};
-use std::io::{Write, stdin, stdout};
+use crate::engine::{lexer, parser, Process};
+use std::io::{ErrorKind, Write, stdin, stdout};
 
 struct Shell {
     prompt: String,
@@ -29,7 +29,6 @@ pub fn run() {
 
     loop {
         let input = shell.ask();
-        println!("{}", input);
 
         let tokens = lexer::lex(input);
         let expr = match parser::parse(&tokens) {
@@ -40,13 +39,18 @@ pub fn run() {
             }
         };
 
-        let child = engine::execute(expr);
-        match child.and_then(|mut c| c.wait()) {
-            Ok(_) => {},
-            Err(e) => {
-                eprintln!("rush: {}", e);
-                continue;
+        let cmd = engine::execute(expr);
+        match cmd {
+            Ok(Process::Child(mut child)) => {
+                let _ = child.wait().map_err(|e| eprintln!("{e}"));
             }
+            Err(e) => {
+                if e.kind() == ErrorKind::Other {
+                    continue;
+                }
+                eprintln!("{e}");
+            }
+            _ => {},
         }
     }
 }
