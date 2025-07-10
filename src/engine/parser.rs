@@ -5,6 +5,8 @@ use std::{iter::Peekable, slice::Iter};
 pub enum Operator {
     LogicalAnd,
     LogicalOr,
+
+    Separator,
 }
 
 #[derive(Debug, PartialEq)]
@@ -76,6 +78,11 @@ fn infix(
             Operator::LogicalOr,
             Box::new(right),
         )),
+        Token::Separator => Ok(Expr::Binary(
+            Box::new(left),
+            Operator::Separator,
+            Box::new(right),
+        )),
         _ => Err("Unexpected infix symbol".into()),
     }
 }
@@ -83,6 +90,7 @@ fn infix(
 fn get_precedence(token: &Token) -> u8 {
     match token {
         Token::Atomic(_) => 0,
+        Token::Separator => 1,
         Token::LogicalAnd | Token::LogicalOr => 2,
     }
 }

@@ -4,6 +4,8 @@ pub enum Token {
 
     LogicalAnd,
     LogicalOr,
+
+    Separator,
 }
 
 pub fn lex(input: String) -> Vec<Token> {
@@ -33,6 +35,10 @@ pub fn lex(input: String) -> Vec<Token> {
                     }
                 }
             }
+            ';' => {
+                tokens.push(Token::Separator);
+                source.next();
+            }
             _ => {
                 let mut atomic = String::new();
 
@@ -55,7 +61,7 @@ pub fn lex(input: String) -> Vec<Token> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::*; 
 
     #[test]
     fn test_atomic() {
