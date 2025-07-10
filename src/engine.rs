@@ -51,9 +51,14 @@ pub fn execute(expr: Expr) -> Result<Process, Error> {
                 Err(_) => execute(*right),
             },
             Operator::Separator => {
-                if let Ok(Process::Child(mut child)) = execute(*left) {
-                    let _ = child.wait();
+                match execute(*left) {
+                    Ok(Process::Child(mut child)) => {
+                        let _ = child.wait().map_err(|e| eprintln!("{e}"));
+                    }
+                    Ok(Process::ExitStatus(_)) => {}
+                    Err(e) => eprintln!("{e}"),
                 }
+
                 Ok(execute(*right)?)
             }
         },
