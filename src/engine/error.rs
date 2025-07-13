@@ -3,6 +3,7 @@ use std::io::{Error, ErrorKind};
 #[derive(Debug)]
 pub enum ShellError {
     Parser(String),
+    Lexer(String),
     Unnecassary,
     IoError(Error),
 }
@@ -10,6 +11,7 @@ pub enum ShellError {
 #[derive(Debug, PartialEq)]
 pub enum ShellErrorKind {
     Parser,
+    Lexer,
     Unnecassary,
     IoError,
 }
@@ -18,6 +20,7 @@ impl ShellError {
     pub fn kind(&self) -> ShellErrorKind {
         match self {
             ShellError::Parser(_) => ShellErrorKind::Parser,
+            ShellError::Lexer(_) => ShellErrorKind::Lexer,
             ShellError::Unnecassary => ShellErrorKind::Unnecassary,
             ShellError::IoError(_) => ShellErrorKind::IoError,
         }
@@ -30,6 +33,7 @@ impl std::fmt::Display for ShellError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ShellError::Parser(msg) => write!(f, "{msg}"),
+            ShellError::Lexer(msg) => write!(f, "{msg}"),
             ShellError::Unnecassary => write!(f, "Unnecassary Error"),
             ShellError::IoError(e) => write!(f, "{e}"),
         }

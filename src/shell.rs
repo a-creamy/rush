@@ -29,7 +29,14 @@ pub fn run() {
     loop {
         let input = shell.ask();
 
-        let tokens = lexer::lex(input);
+        let tokens = match lexer::lex(input) {
+            Ok(result) => result,
+            Err(e) => {
+                eprintln!("rush: {e}");
+                continue;
+            }
+        };
+
         let expr = match parser::parse(&tokens) {
             Ok(result) => result,
             Err(e) => {
