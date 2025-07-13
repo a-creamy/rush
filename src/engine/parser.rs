@@ -1,4 +1,4 @@
-use super::lexer::Token;
+use crate::engine::{error::ShellError, lexer::Token};
 use std::{iter::Peekable, slice::Iter};
 
 #[derive(Debug, PartialEq)]
@@ -17,12 +17,11 @@ pub enum Expr {
     Binary(Box<Expr>, Operator, Box<Expr>),
 }
 
-pub fn parse(tokens: &[Token]) -> Result<Expr, String> {
-    let mut tokens_temp = tokens.iter().peekable();
-    expression(&mut tokens_temp, 0)
+pub fn parse(tokens: &[Token]) -> Result<Expr, ShellError> {
+    expression(&mut tokens.iter().peekable(), 0)
 }
 
-fn expression(tokens: &mut Peekable<Iter<Token>>, precedence: u8) -> Result<Expr, String> {
+fn expression(tokens: &mut Peekable<Iter<Token>>, precedence: u8) -> Result<Expr, ShellError> {
     let mut left = prefix(tokens)?;
 
     while let Some(&token) = tokens.peek() {
@@ -40,7 +39,7 @@ fn expression(tokens: &mut Peekable<Iter<Token>>, precedence: u8) -> Result<Expr
     Ok(left)
 }
 
-fn prefix(tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, String> {
+fn prefix(tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, ShellError> {
     if let Some(token) = tokens.next() {
         match token {
             Token::Atomic(value) => {
@@ -54,7 +53,7 @@ fn prefix(tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, String> {
 
                 Ok(Expr::Atomic(args))
             }
-            _ => Err("Unexpected symbol".into()),
+            _ => Err(ShellError::Parser("Unexpected symbol".into())),
         }
     } else {
         Ok(Expr::Atomic(vec![]))
@@ -66,7 +65,7 @@ fn infix(
     left: Expr,
     token: &Token,
     precedence: u8,
-) -> Result<Expr, String> {
+) -> Result<Expr, ShellError> {
     let right = expression(tokens, precedence + 1)?;
 
     match token {
@@ -90,7 +89,7 @@ fn infix(
             Operator::RedirectOverwrite,
             Box::new(right),
         )),
-        _ => Err("Unexpected infix symbol".into()),
+        _ => Err(ShellError::Parser("Unexpected infix symbol".into())),
     }
 }
 

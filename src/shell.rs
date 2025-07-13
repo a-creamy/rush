@@ -1,6 +1,5 @@
-use crate::engine;
-use crate::engine::{lexer, parser, Process};
-use std::io::{ErrorKind, Write, stdin, stdout};
+use crate::engine::{self, Process, error::ShellErrorKind, lexer, parser};
+use std::io::{Write, stdin, stdout};
 
 struct Shell {
     prompt: String,
@@ -19,7 +18,7 @@ impl Shell {
         let _ = stdout().flush();
         stdin()
             .read_line(&mut s)
-            .expect("Did not enter a correct string");
+            .expect("Did not enter correct string");
         s.trim().to_string()
     }
 }
@@ -34,7 +33,7 @@ pub fn run() {
         let expr = match parser::parse(&tokens) {
             Ok(result) => result,
             Err(e) => {
-                eprintln!("rush: {}", e);
+                eprintln!("rush: {e}");
                 continue;
             }
         };
@@ -42,15 +41,15 @@ pub fn run() {
         let cmd = engine::execute(expr, None);
         match cmd {
             Ok(Process::Child(mut child)) => {
-                let _ = child.wait().map_err(|e| eprintln!("{e}"));
+                let _ = child.wait().map_err(|e| eprintln!("rush: {e}"));
             }
             Err(e) => {
-                if e.kind() == ErrorKind::Other {
+                if e.kind() == ShellErrorKind::Unnecassary {
                     continue;
                 }
-                eprintln!("{e}");
+                eprintln!("rush: {e}");
             }
-            _ => {},
+            _ => {}
         }
     }
 }

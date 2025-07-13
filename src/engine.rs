@@ -1,11 +1,13 @@
 use std::{
     fs::File,
-    io::{Error, ErrorKind},
     process::{Child, Command, ExitStatus, Stdio},
 };
 
+use crate::engine::error::ShellError;
+
 use super::engine::parser::{Expr, Operator};
 
+pub mod error;
 pub mod lexer;
 pub mod parser;
 
@@ -34,11 +36,11 @@ impl Config {
     }
 }
 
-pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Process, Error> {
+pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Process, ShellError> {
     match expr {
         Expr::Atomic(a) => {
             if a.is_empty() {
-                return Err(Error::new(ErrorKind::Other, "Empty command"));
+                return Err(ShellError::Unnecassary);
             }
 
             if let Some(c) = config {
@@ -51,7 +53,7 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Process, Error> {
                         .spawn()?,
                 ))
             } else {
-                return Ok(Process::Child(Command::new(&a[0]).args(&a[1..]).spawn()?));
+                Ok(Process::Child(Command::new(&a[0]).args(&a[1..]).spawn()?))
             }
         }
         Expr::Binary(left, op, right) => match op {
@@ -59,7 +61,7 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Process, Error> {
                 Ok(Process::Child(mut child)) => match child.wait() {
                     Ok(status) if status.success() => execute(*right, config),
                     Ok(status) => Ok(Process::ExitStatus(status)),
-                    Err(e) => Err(e),
+                    Err(e) => Err(ShellError::from(e)),
                 },
                 Ok(Process::ExitStatus(status)) => {
                     if status.success() {
@@ -87,10 +89,10 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Process, Error> {
             Operator::Separator => {
                 match execute(*left, None) {
                     Ok(Process::Child(mut child)) => {
-                        let _ = child.wait().map_err(|e| eprintln!("{e}"));
+                        let _ = child.wait().map_err(|e| eprintln!("rush: {e}"));
                     }
                     Ok(Process::ExitStatus(_)) => {}
-                    Err(e) => eprintln!("{e}"),
+                    Err(e) => eprintln!("rush: {e}"),
                 }
 
                 Ok(execute(*right, config)?)
@@ -98,12 +100,12 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Process, Error> {
             Operator::RedirectOverwrite => {
                 let file = if let Expr::Atomic(a) = *right {
                     if a.is_empty() {
-                        return Err(Error::new(ErrorKind::InvalidFilename, "Invalid filename"));
+                        return Err(ShellError::Unnecassary);
                     }
 
                     a[0].clone()
                 } else {
-                    return Err(Error::new(ErrorKind::InvalidFilename, "Invalid filename"));
+                    return Err(ShellError::Unnecassary);
                 };
 
                 Ok(execute(
