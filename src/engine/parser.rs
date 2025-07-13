@@ -7,6 +7,8 @@ pub enum Operator {
     LogicalOr,
 
     Separator,
+
+    RedirectOverwrite,
 }
 
 #[derive(Debug, PartialEq)]
@@ -83,6 +85,11 @@ fn infix(
             Operator::Separator,
             Box::new(right),
         )),
+        Token::RedirectOverwrite => Ok(Expr::Binary(
+            Box::new(left),
+            Operator::RedirectOverwrite,
+            Box::new(right),
+        )),
         _ => Err("Unexpected infix symbol".into()),
     }
 }
@@ -92,6 +99,7 @@ fn get_precedence(token: &Token) -> u8 {
         Token::Atomic(_) => 0,
         Token::Separator => 1,
         Token::LogicalAnd | Token::LogicalOr => 2,
+        Token::RedirectOverwrite => 4,
     }
 }
 

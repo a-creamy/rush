@@ -6,6 +6,8 @@ pub enum Token {
     LogicalOr,
 
     Separator,
+
+    RedirectOverwrite
 }
 
 pub fn lex(input: String) -> Vec<Token> {
@@ -39,11 +41,15 @@ pub fn lex(input: String) -> Vec<Token> {
                 tokens.push(Token::Separator);
                 source.next();
             }
+            '>' => {
+                tokens.push(Token::RedirectOverwrite);
+                source.next();
+            }
             _ => {
                 let mut atomic = String::new();
 
                 while let Some(c) = source.peek() {
-                    if c.is_alphabetic() {
+                    if c.is_alphabetic() || c == &'.' {
                         atomic.push(c.to_owned());
                         source.next();
                     } else {

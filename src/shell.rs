@@ -39,7 +39,7 @@ pub fn run() {
             }
         };
 
-        let cmd = engine::execute(expr);
+        let cmd = engine::execute(expr, None);
         match cmd {
             Ok(Process::Child(mut child)) => {
                 let _ = child.wait().map_err(|e| eprintln!("{e}"));
