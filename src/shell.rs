@@ -1,4 +1,4 @@
-use crate::engine::{self, Process, error::ShellErrorKind, lexer, parser};
+use crate::engine::{self, error::ShellErrorKind, lexer, parser};
 use std::io::{Write, stdin, stdout};
 
 struct Shell {
@@ -47,7 +47,7 @@ pub fn run() {
 
         let cmd = engine::execute(expr, None);
         match cmd {
-            Ok(Process::Child(mut child)) => {
+            Ok(mut child) => {
                 let _ = child.wait().map_err(|e| eprintln!("rush: {e}"));
             }
             Err(e) => {
@@ -56,7 +56,6 @@ pub fn run() {
                 }
                 eprintln!("rush: {e}");
             }
-            _ => {}
         }
     }
 }

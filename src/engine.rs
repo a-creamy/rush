@@ -1,23 +1,18 @@
 use std::{
     path::PathBuf,
-    process::{Child, Command, ExitStatus},
+    process::{Child, Command},
 };
 
 use crate::engine::{
     error::ShellError,
     parser::{Expr, Operator},
-    stream::{FileOption, Stream, StreamFile},
+    stream::{FileOption, Stream, StreamChildStdout, StreamFile},
 };
 
 pub mod error;
 pub mod lexer;
 pub mod parser;
 pub mod stream;
-
-pub enum Process {
-    Child(Child),
-    ExitStatus(ExitStatus),
-}
 
 pub struct Config {
     pub stdout: Stream,
@@ -35,7 +30,7 @@ impl Config {
     }
 }
 
-pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Process, ShellError> {
+pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Child, ShellError> {
     match expr {
         Expr::Atomic(a) => {
             if a.is_empty() {
@@ -43,54 +38,37 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Process, ShellErro
             }
 
             if let Some(c) = config {
-                Ok(Process::Child(
-                    Command::new(&a[0])
-                        .args(&a[1..])
-                        .stdout(c.stdout.stdio())
-                        .stderr(c.stderr.stdio())
-                        .stdin(c.stdin.stdio())
-                        .spawn()?,
-                ))
+                Ok(Command::new(&a[0])
+                    .args(&a[1..])
+                    .stdout(c.stdout.stdio())
+                    .stderr(c.stderr.stdio())
+                    .stdin(c.stdin.stdio())
+                    .spawn()?)
             } else {
-                Ok(Process::Child(Command::new(&a[0]).args(&a[1..]).spawn()?))
+                Ok(Command::new(&a[0]).args(&a[1..]).spawn()?)
             }
         }
         Expr::Binary(left, op, right) => match op {
             Operator::LogicalAnd => match execute(*left, None) {
-                Ok(Process::Child(mut child)) => match child.wait() {
+                Ok(mut child) => match child.wait() {
                     Ok(status) if status.success() => execute(*right, config),
-                    Ok(status) => Ok(Process::ExitStatus(status)),
+                    Ok(_) => Err(ShellError::Unnecassary),
                     Err(e) => Err(ShellError::from(e)),
                 },
-                Ok(Process::ExitStatus(status)) => {
-                    if status.success() {
-                        execute(*right, config)
-                    } else {
-                        Ok(Process::ExitStatus(status))
-                    }
-                }
                 Err(e) => Err(e),
             },
             Operator::LogicalOr => match execute(*left, None) {
-                Ok(Process::Child(mut child)) => match child.wait() {
-                    Ok(status) if status.success() => Ok(Process::ExitStatus(status)),
+                Ok(mut child) => match child.wait() {
+                    Ok(_) => Err(ShellError::Unnecassary),
                     _ => execute(*right, config),
                 },
-                Ok(Process::ExitStatus(status)) => {
-                    if status.success() {
-                        Ok(Process::ExitStatus(status))
-                    } else {
-                        execute(*right, config)
-                    }
-                }
                 Err(_) => execute(*right, config),
             },
             Operator::Separator => {
                 match execute(*left, None) {
-                    Ok(Process::Child(mut child)) => {
+                    Ok(mut child) => {
                         let _ = child.wait().map_err(|e| eprintln!("rush: {e}"));
                     }
-                    Ok(Process::ExitStatus(_)) => {}
                     Err(e) => eprintln!("rush: {e}"),
                 }
 
@@ -115,6 +93,29 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Process, ShellErro
                         Stream::Inherit,
                     )),
                 )?)
+            }
+            Operator::Pipe => {
+                match execute(
+                    *left,
+                    Some(&Config::new(
+                        Stream::Piped,
+                        Stream::Inherit,
+                        Stream::Inherit,
+                    )),
+                ) {
+                    Ok(mut child) => {
+                        child.wait()?;
+                        Ok(execute(
+                            *right,
+                            Some(&Config::new(
+                                Stream::Inherit,
+                                Stream::Inherit,
+                                child.stdout.unwrap().stream(),
+                            )),
+                        )?)
+                    }
+                    Err(e) => Err(e),
+                }
             }
         },
     }
