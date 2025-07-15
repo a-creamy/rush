@@ -30,7 +30,7 @@ pub fn run() {
         let input = shell.ask();
 
         let tokens = match lexer::lex(input) {
-            Ok(result) => result,
+            Ok(tokens) => tokens,
             Err(e) => {
                 eprintln!("rush: {e}");
                 continue;
@@ -38,7 +38,7 @@ pub fn run() {
         };
 
         let expr = match parser::parse(&tokens) {
-            Ok(result) => result,
+            Ok(expr) => expr,
             Err(e) => {
                 eprintln!("rush: {e}");
                 continue;
@@ -48,7 +48,9 @@ pub fn run() {
         let cmd = engine::execute(expr, None);
         match cmd {
             Ok(mut child) => {
-                let _ = child.wait().map_err(|e| eprintln!("rush: {e}"));
+                if let Err(e) = child.wait() {
+                    eprintln!("rush: {e}");
+                }
             }
             Err(e) => {
                 if e.kind() == ShellErrorKind::Unnecassary {
