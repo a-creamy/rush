@@ -3,9 +3,10 @@ use std::{
     process::{Child, Command, ExitStatus, Stdio},
 };
 
-use crate::engine::error::ShellError;
-
-use super::engine::parser::{Expr, Operator};
+use crate::engine::{
+    error::ShellError,
+    parser::{Expr, Operator},
+};
 
 pub mod error;
 pub mod lexer;

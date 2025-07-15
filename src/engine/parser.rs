@@ -53,7 +53,10 @@ fn prefix(tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, ShellError> {
 
                 Ok(Expr::Atomic(args))
             }
-            _ => Err(ShellError::Parser("Unexpected symbol".into())),
+            _ => Err(ShellError::Parser(format!(
+                "Unexpected operator: {}",
+                token
+            ))),
         }
     } else {
         Ok(Expr::Atomic(vec![]))
@@ -89,7 +92,7 @@ fn infix(
             Operator::RedirectOverwrite,
             Box::new(right),
         )),
-        _ => Err(ShellError::Parser("Unexpected infix symbol".into())),
+        _ => Err(ShellError::Parser(format!("Unknown operator: {}", token))),
     }
 }
 

@@ -12,6 +12,18 @@ pub enum Token {
     RedirectOverwrite,
 }
 
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Token::Atomic(a) => write!(f, "{}", a),
+            Token::LogicalAnd => write!(f, "&&"),
+            Token::LogicalOr => write!(f, "||"),
+            Token::Separator => write!(f, ";"),
+            Token::RedirectOverwrite => write!(f, ">"),
+        }
+    }
+}
+
 pub fn lex(input: String) -> Result<Vec<Token>, ShellError> {
     let mut tokens = Vec::new();
 
@@ -62,7 +74,7 @@ pub fn lex(input: String) -> Result<Vec<Token>, ShellError> {
                 tokens.push(Token::Atomic(atomic));
             }
             _ => {
-                return Err(ShellError::Lexer("Unknown symbol".into()));
+                return Err(ShellError::Lexer(format!("Unknown character: {}", ch)));
             }
         }
     }
