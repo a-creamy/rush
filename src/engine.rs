@@ -105,14 +105,39 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Child, ShellError>
                 ) {
                     Ok(mut child) => {
                         child.wait()?;
-                        Ok(execute(
-                            *right,
-                            Some(&Config::new(
-                                Stream::Inherit,
-                                Stream::Inherit,
-                                child.stdout.unwrap().stream(),
-                            )),
-                        )?)
+                        if let Some(c) = config {
+                            if let Some(mut stdout) = child.stdout {
+                                Ok(execute(
+                                    *right,
+                                    Some(&Config::new(c.stdout.clone(), c.stderr.clone(), stdout.stream())),
+                                )?)
+                            } else {
+                                Ok(execute(
+                                    *right,
+                                    config,
+                                )?)
+                            }
+                        } else {
+                            if let Some(mut stdout) = child.stdout {
+                                Ok(execute(
+                                    *right,
+                                    Some(&Config::new(
+                                        Stream::Inherit,
+                                        Stream::Inherit,
+                                        stdout.stream(),
+                                    )),
+                                )?)
+                            } else {
+                                Ok(execute(
+                                    *right,
+                                    Some(&Config::new(
+                                        Stream::Inherit,
+                                        Stream::Inherit,
+                                        Stream::Inherit,
+                                    )),
+                                )?)
+                            }
+                        }
                     }
                     Err(e) => Err(e),
                 }
