@@ -6,6 +6,8 @@ pub enum Operator {
     LogicalAnd,
     LogicalOr,
 
+    Pipe,
+
     Separator,
 
     RedirectOverwrite,
@@ -92,6 +94,11 @@ fn infix(
             Operator::RedirectOverwrite,
             Box::new(right),
         )),
+        Token::Pipe => Ok(Expr::Binary(
+            Box::new(left),
+            Operator::Pipe,
+            Box::new(right),
+        )),
         _ => Err(ShellError::Parser(format!("Unknown operator: {}", token))),
     }
 }
@@ -101,6 +108,7 @@ fn get_precedence(token: &Token) -> u8 {
         Token::Atomic(_) => 0,
         Token::Separator => 1,
         Token::LogicalAnd | Token::LogicalOr => 2,
+        Token::Pipe => 3,
         Token::RedirectOverwrite => 4,
     }
 }

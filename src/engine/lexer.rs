@@ -7,6 +7,8 @@ pub enum Token {
     LogicalAnd,
     LogicalOr,
 
+    Pipe,
+
     Separator,
 
     RedirectOverwrite,
@@ -18,6 +20,7 @@ impl std::fmt::Display for Token {
             Token::Atomic(a) => write!(f, "{}", a),
             Token::LogicalAnd => write!(f, "&&"),
             Token::LogicalOr => write!(f, "||"),
+            Token::Pipe => write!(f, "|"),
             Token::Separator => write!(f, ";"),
             Token::RedirectOverwrite => write!(f, ">"),
         }
@@ -48,6 +51,8 @@ pub fn lex(input: String) -> Result<Vec<Token>, ShellError> {
                     if peek.to_owned() == '|' {
                         tokens.push(Token::LogicalOr);
                         source.next();
+                    } else {
+                        tokens.push(Token::Pipe);
                     }
                 }
             }

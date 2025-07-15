@@ -1,16 +1,18 @@
 use std::{
-    fs::File,
-    process::{Child, Command, ExitStatus, Stdio},
+    path::PathBuf,
+    process::{Child, Command, ExitStatus},
 };
 
 use crate::engine::{
     error::ShellError,
     parser::{Expr, Operator},
+    stream::{FileOption, Stream, StreamFile},
 };
 
 pub mod error;
 pub mod lexer;
 pub mod parser;
+pub mod stream;
 
 pub enum Process {
     Child(Child),
@@ -18,21 +20,17 @@ pub enum Process {
 }
 
 pub struct Config {
-    pub stdout: Box<dyn Fn() -> Stdio>,
-    pub stderr: Box<dyn Fn() -> Stdio>,
-    pub stdin: Box<dyn Fn() -> Stdio>,
+    pub stdout: Stream,
+    pub stderr: Stream,
+    pub stdin: Stream,
 }
 
 impl Config {
-    pub fn new(
-        stdout: impl Fn() -> Stdio + 'static,
-        stderr: impl Fn() -> Stdio + 'static,
-        stdin: impl Fn() -> Stdio + 'static,
-    ) -> Self {
+    pub fn new(stdout: Stream, stderr: Stream, stdin: Stream) -> Self {
         Self {
-            stdout: Box::new(stdout),
-            stderr: Box::new(stderr),
-            stdin: Box::new(stdin),
+            stdout: stdout,
+            stderr: stderr,
+            stdin: stdin,
         }
     }
 }
@@ -48,9 +46,9 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Process, ShellErro
                 Ok(Process::Child(
                     Command::new(&a[0])
                         .args(&a[1..])
-                        .stdout((c.stdout)())
-                        .stderr((c.stderr)())
-                        .stdin((c.stdin)())
+                        .stdout(c.stdout.stdio())
+                        .stderr(c.stderr.stdio())
+                        .stdin(c.stdin.stdio())
                         .spawn()?,
                 ))
             } else {
@@ -112,11 +110,9 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Process, ShellErro
                 Ok(execute(
                     *left,
                     Some(&Config::new(
-                        move || {
-                            Stdio::from(File::create(file.clone()).expect("Failed to create file"))
-                        },
-                        || Stdio::inherit(),
-                        || Stdio::inherit(),
+                        PathBuf::from(file).stream(FileOption::Overwrite),
+                        Stream::Inherit,
+                        Stream::Inherit,
                     )),
                 )?)
             }
