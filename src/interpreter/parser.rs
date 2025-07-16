@@ -1,4 +1,4 @@
-use crate::engine::{error::ShellError, lexer::Token};
+use crate::interpreter::{error::ShellError, lexer::Token};
 use std::{iter::Peekable, slice::Iter};
 
 #[derive(Debug, PartialEq)]

@@ -3,7 +3,7 @@ use std::{
     process::{Child, Command},
 };
 
-use crate::engine::{
+use crate::interpreter::{
     error::ShellError,
     parser::{Expr, Operator},
     stream::{FileOption, Stream, StreamChildStdout, StreamFile},
@@ -36,7 +36,6 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Child, ShellError>
             if a.is_empty() {
                 return Err(ShellError::Unnecassary);
             }
-
 
             if let Some(c) = config {
                 Ok(Command::new(&a[0])

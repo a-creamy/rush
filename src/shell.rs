@@ -1,4 +1,4 @@
-use crate::engine::{self, error::ShellErrorKind, lexer, parser};
+use crate::interpreter::{self, error::ShellErrorKind, lexer, parser};
 use std::io::{Write, stdin, stdout};
 
 struct Shell {
@@ -45,7 +45,7 @@ pub fn run() {
             }
         };
 
-        let cmd = engine::execute(expr, None);
+        let cmd = interpreter::execute(expr, None);
         match cmd {
             Ok(mut child) => {
                 if let Err(e) = child.wait() {

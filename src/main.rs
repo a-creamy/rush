@@ -1,5 +1,5 @@
 pub mod shell;
-pub mod engine;
+pub mod interpreter;
 
 fn main() {
     shell::run();

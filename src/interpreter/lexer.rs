@@ -1,4 +1,4 @@
-use crate::engine::error::ShellError;
+use crate::interpreter::error::ShellError;
 
 #[derive(Debug, PartialEq)]
 pub enum Token {
