@@ -48,10 +48,9 @@ fn prefix(tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, ShellError> {
             Token::Atomic(value) => {
                 let mut args = vec![value.clone()];
 
-                while let Some(&&Token::Atomic(_)) = tokens.peek() {
-                    if let &Token::Atomic(ref value) = tokens.next().unwrap() {
-                        args.push(value.clone());
-                    }
+                while let Some(Token::Atomic(value)) = tokens.peek() {
+                    args.push(value.clone());
+                    tokens.next();
                 }
 
                 Ok(Expr::Atomic(args))

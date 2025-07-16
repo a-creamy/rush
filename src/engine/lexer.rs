@@ -73,11 +73,11 @@ pub fn lex(input: String) -> Result<Vec<Token>, ShellError> {
                     }
                 }
             }
-            'a'..='z' | 'A'..='Z' | '.' | '-' | '_' => {
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '.' | '-' | '_' => {
                 let mut atomic = String::new();
 
                 while let Some(c) = source.peek() {
-                    if c.is_alphabetic() || c == &'.' || c == &'-' || c == &'_' {
+                    if c.is_alphabetic() || c.is_numeric() || c == &'.' || c == &'-' || c == &'_' {
                         atomic.push(c.to_owned());
                         source.next();
                     } else {
