@@ -1,4 +1,4 @@
-use crate::interpreter::{self, error::ShellErrorKind, lexer, parser};
+use crate::interpreter::{self, error::ShellErrorKind};
 use std::io::{Write, stdin, stdout};
 
 struct Shell {
@@ -29,35 +29,11 @@ pub fn run() {
     loop {
         let input = shell.ask();
 
-        let tokens = match lexer::lex(input) {
-            Ok(tokens) => tokens,
-            Err(e) => {
-                eprintln!("rush: {e}");
-                continue;
+        _ = interpreter::interpret(input).map_err(|e| {
+            if e.kind() == ShellErrorKind::Unnecassary {
+                return;
             }
-        };
-
-        let expr = match parser::parse(&tokens) {
-            Ok(expr) => expr,
-            Err(e) => {
-                eprintln!("rush: {e}");
-                continue;
-            }
-        };
-
-        let cmd = interpreter::execute(expr, None);
-        match cmd {
-            Ok(mut child) => {
-                if let Err(e) = child.wait() {
-                    eprintln!("rush: {e}");
-                }
-            }
-            Err(e) => {
-                if e.kind() == ShellErrorKind::Unnecassary {
-                    continue;
-                }
-                eprintln!("rush: {e}");
-            }
-        }
+            eprintln!("rush: {e}");
+        });
     }
 }
