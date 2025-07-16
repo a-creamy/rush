@@ -11,6 +11,7 @@ pub enum Operator {
     Separator,
 
     RedirectOverwrite,
+    RedirectAppend,
 }
 
 #[derive(Debug, PartialEq)]
@@ -94,6 +95,11 @@ fn infix(
             Operator::RedirectOverwrite,
             Box::new(right),
         )),
+        Token::RedirectAppend => Ok(Expr::Binary(
+            Box::new(left),
+            Operator::RedirectAppend,
+            Box::new(right),
+        )),
         Token::Pipe => Ok(Expr::Binary(
             Box::new(left),
             Operator::Pipe,
@@ -109,7 +115,7 @@ fn get_precedence(token: &Token) -> u8 {
         Token::Separator => 1,
         Token::LogicalAnd | Token::LogicalOr => 2,
         Token::Pipe => 3,
-        Token::RedirectOverwrite => 4,
+        Token::RedirectOverwrite | Token::RedirectAppend => 4,
     }
 }
 

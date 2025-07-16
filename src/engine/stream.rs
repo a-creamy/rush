@@ -5,7 +5,7 @@ use std::{
     process::{ChildStdout, Stdio},
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Stream {
     Inherit,
     Piped,
@@ -21,7 +21,7 @@ impl Stream {
             Stream::Piped => Stdio::piped(),
             Stream::File(path, options) => match options {
                 FileOption::Overwrite => {
-                    Stdio::from(File::create_new(path).expect("Could not create file"))
+                    Stdio::from(File::create(path).expect("Could not create file"))
                 }
                 FileOption::Append => Stdio::from(
                     OpenOptions::new()
@@ -39,7 +39,7 @@ impl Stream {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum FileOption {
     Overwrite,
     Append,

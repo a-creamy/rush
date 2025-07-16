@@ -37,6 +37,7 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Child, ShellError>
                 return Err(ShellError::Unnecassary);
             }
 
+
             if let Some(c) = config {
                 Ok(Command::new(&a[0])
                     .args(&a[1..])
@@ -91,6 +92,26 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Child, ShellError>
                     *left,
                     Some(&Config::new(
                         PathBuf::from(file).stream(FileOption::Overwrite),
+                        Stream::Inherit,
+                        Stream::Inherit,
+                    )),
+                )?)
+            }
+            Operator::RedirectAppend => {
+                let file = if let Expr::Atomic(a) = *right {
+                    if a.is_empty() {
+                        return Err(ShellError::Unnecassary);
+                    }
+
+                    a[0].clone()
+                } else {
+                    return Err(ShellError::Unnecassary);
+                };
+
+                Ok(execute(
+                    *left,
+                    Some(&Config::new(
+                        PathBuf::from(file).stream(FileOption::Append),
                         Stream::Inherit,
                         Stream::Inherit,
                     )),

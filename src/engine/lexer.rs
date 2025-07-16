@@ -12,6 +12,7 @@ pub enum Token {
     Separator,
 
     RedirectOverwrite,
+    RedirectAppend,
 }
 
 impl std::fmt::Display for Token {
@@ -23,6 +24,7 @@ impl std::fmt::Display for Token {
             Token::Pipe => write!(f, "|"),
             Token::Separator => write!(f, ";"),
             Token::RedirectOverwrite => write!(f, ">"),
+            Token::RedirectAppend => write!(f, ">>"),
         }
     }
 }
@@ -61,8 +63,15 @@ pub fn lex(input: String) -> Result<Vec<Token>, ShellError> {
                 source.next();
             }
             '>' => {
-                tokens.push(Token::RedirectOverwrite);
                 source.next();
+                if let Some(peek) = source.peek() {
+                    if peek.to_owned() == '>' {
+                        tokens.push(Token::RedirectAppend);
+                        source.next();
+                    } else {
+                        tokens.push(Token::RedirectOverwrite);
+                    }
+                }
             }
             'a'..='z' | 'A'..='Z' | '.' | '-' | '_' => {
                 let mut atomic = String::new();
