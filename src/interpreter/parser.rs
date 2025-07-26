@@ -1,7 +1,7 @@
 use crate::interpreter::{error::ShellError, lexer::Token};
 use std::{iter::Peekable, slice::Iter};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Operator {
     LogicalAnd,
     LogicalOr,
@@ -10,11 +10,11 @@ pub enum Operator {
 
     Separator,
 
-    RedirectOverwrite,
-    RedirectAppend,
+    RedirectOverwrite(i8),
+    RedirectAppend(i8),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Atomic(Vec<String>),
     Binary(Box<Expr>, Operator, Box<Expr>),
@@ -49,6 +49,38 @@ fn prefix(tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, ShellError> {
                 let mut args = vec![value.clone()];
 
                 while let Some(Token::Atomic(value)) = tokens.peek() {
+                    if value.parse::<i8>().is_ok() {
+                        tokens.next();
+                        match tokens.peek() {
+                            Some(&&Token::RedirectOverwrite) => {
+                                tokens.next();
+                                let right = expression(
+                                    tokens,
+                                    get_precedence(&Token::RedirectOverwrite) + 1,
+                                )?;
+                                return Ok(Expr::Binary(
+                                    Box::new(Expr::Atomic(args)),
+                                    Operator::RedirectOverwrite(
+                                        value.parse::<i8>().expect("Failed to parse into i8"),
+                                    ),
+                                    Box::new(right),
+                                ));
+                            }
+                            Some(&&Token::RedirectAppend) => {
+                                tokens.next();
+                                let right =
+                                    expression(tokens, get_precedence(&Token::RedirectAppend) + 1)?;
+                                return Ok(Expr::Binary(
+                                    Box::new(Expr::Atomic(args)),
+                                    Operator::RedirectAppend(
+                                        value.parse::<i8>().expect("Failed to parse into i8"),
+                                    ),
+                                    Box::new(right),
+                                ));
+                            }
+                            _ => {}
+                        }
+                    }
                     args.push(value.clone());
                     tokens.next();
                 }
@@ -91,12 +123,12 @@ fn infix(
         )),
         Token::RedirectOverwrite => Ok(Expr::Binary(
             Box::new(left),
-            Operator::RedirectOverwrite,
+            Operator::RedirectOverwrite(1),
             Box::new(right),
         )),
         Token::RedirectAppend => Ok(Expr::Binary(
             Box::new(left),
-            Operator::RedirectAppend,
+            Operator::RedirectAppend(1),
             Box::new(right),
         )),
         Token::Pipe => Ok(Expr::Binary(

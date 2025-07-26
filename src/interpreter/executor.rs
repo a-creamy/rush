@@ -71,7 +71,7 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Child, ShellError>
 
                 Ok(execute(*right, config)?)
             }
-            Operator::RedirectOverwrite => {
+            Operator::RedirectOverwrite(fd) => {
                 let file = if let Expr::Atomic(a) = *right {
                     if a.is_empty() {
                         return Err(ShellError::Unnecassary);
@@ -82,16 +82,42 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Child, ShellError>
                     return Err(ShellError::Unnecassary);
                 };
 
-                Ok(execute(
-                    *left,
-                    Some(&Config::new(
-                        PathBuf::from(file).stream(FileOption::Overwrite),
-                        Stream::Inherit,
-                        Stream::Inherit,
-                    )),
-                )?)
+                match fd {
+                    0 => Ok(execute(
+                        *left,
+                        Some(&Config::new(
+                            Stream::Inherit,
+                            Stream::Inherit,
+                            PathBuf::from(file).stream(FileOption::Overwrite),
+                        )),
+                    )?),
+                    1 => Ok(execute(
+                        *left,
+                        Some(&Config::new(
+                            PathBuf::from(file).stream(FileOption::Overwrite),
+                            Stream::Inherit,
+                            Stream::Inherit,
+                        )),
+                    )?),
+                    2 => Ok(execute(
+                        *left,
+                        Some(&Config::new(
+                            Stream::Inherit,
+                            PathBuf::from(file).stream(FileOption::Overwrite),
+                            Stream::Inherit,
+                        )),
+                    )?),
+                    _ => Ok(execute(
+                        *left,
+                        Some(&Config::new(
+                            PathBuf::from(file).stream(FileOption::Overwrite),
+                            Stream::Inherit,
+                            Stream::Inherit,
+                        )),
+                    )?),
+                }
             }
-            Operator::RedirectAppend => {
+            Operator::RedirectAppend(fd) => {
                 let file = if let Expr::Atomic(a) = *right {
                     if a.is_empty() {
                         return Err(ShellError::Unnecassary);
@@ -102,14 +128,40 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Child, ShellError>
                     return Err(ShellError::Unnecassary);
                 };
 
-                Ok(execute(
-                    *left,
-                    Some(&Config::new(
-                        PathBuf::from(file).stream(FileOption::Append),
-                        Stream::Inherit,
-                        Stream::Inherit,
-                    )),
-                )?)
+                match fd {
+                    0 => Ok(execute(
+                        *left,
+                        Some(&Config::new(
+                            Stream::Inherit,
+                            Stream::Inherit,
+                            PathBuf::from(file).stream(FileOption::Append),
+                        )),
+                    )?),
+                    1 => Ok(execute(
+                        *left,
+                        Some(&Config::new(
+                            PathBuf::from(file).stream(FileOption::Append),
+                            Stream::Inherit,
+                            Stream::Inherit,
+                        )),
+                    )?),
+                    2 => Ok(execute(
+                        *left,
+                        Some(&Config::new(
+                            Stream::Inherit,
+                            PathBuf::from(file).stream(FileOption::Append),
+                            Stream::Inherit,
+                        )),
+                    )?),
+                    _ => Ok(execute(
+                        *left,
+                        Some(&Config::new(
+                            PathBuf::from(file).stream(FileOption::Append),
+                            Stream::Inherit,
+                            Stream::Inherit,
+                        )),
+                    )?),
+                }
             }
             Operator::Pipe => {
                 match execute(
