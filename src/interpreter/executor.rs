@@ -1,4 +1,5 @@
 use std::{
+    env,
     path::PathBuf,
     process::{Child, Command},
 };
@@ -25,48 +26,64 @@ impl Config {
     }
 }
 
-pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Child, ShellError> {
+pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Option<Child>, ShellError> {
     match expr {
         Expr::Atomic(a) => {
             if a.is_empty() {
                 return Err(ShellError::Unnecassary);
             }
 
+            match a[0].as_str() {
+                "cd" => {
+                    if 1 < a.len() {
+                        env::set_current_dir(a[1].clone())?;
+                    } else {
+                        env::set_current_dir(env::home_dir().unwrap())?;
+                    }
+                    return Ok(None);
+                }
+                _ => {}
+            }
+
             if let Some(c) = config {
-                Ok(Command::new(&a[0])
-                    .args(&a[1..])
-                    .stdout(c.stdout.stdio())
-                    .stderr(c.stderr.stdio())
-                    .stdin(c.stdin.stdio())
-                    .spawn()?)
+                Ok(Some(
+                    Command::new(&a[0])
+                        .args(&a[1..])
+                        .stdout(c.stdout.stdio())
+                        .stderr(c.stderr.stdio())
+                        .stdin(c.stdin.stdio())
+                        .spawn()?,
+                ))
             } else {
-                Ok(Command::new(&a[0]).args(&a[1..]).spawn()?)
+                Ok(Some(Command::new(&a[0]).args(&a[1..]).spawn()?))
             }
         }
         Expr::Binary(left, op, right) => match op {
-            Operator::LogicalAnd => match execute(*left, None) {
-                Ok(mut child) => match child.wait() {
+            Operator::LogicalAnd => match execute(*left, None)? {
+                Some(mut child) => match child.wait() {
                     Ok(status) if status.success() => execute(*right, config),
                     Ok(_) => Err(ShellError::Unnecassary),
                     Err(e) => Err(ShellError::from(e)),
                 },
-                Err(e) => Err(e),
+                None => Ok(None),
             },
             Operator::LogicalOr => match execute(*left, None) {
-                Ok(mut child) => match child.wait() {
+                Ok(Some(mut child)) => match child.wait() {
                     Ok(_) => Err(ShellError::Unnecassary),
                     _ => execute(*right, config),
                 },
                 Err(_) => execute(*right, config),
+                Ok(None) => Ok(None),
             },
             Operator::Separator => {
                 match execute(*left, None) {
-                    Ok(mut child) => {
+                    Ok(Some(mut child)) => {
                         if let Err(e) = child.wait() {
                             eprintln!("rush: {e}");
                         }
                     }
                     Err(e) => eprintln!("rush: {e}"),
+                    Ok(None) => {}
                 }
 
                 Ok(execute(*right, config)?)
@@ -171,8 +188,8 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Child, ShellError>
                         Stream::Inherit,
                         Stream::Inherit,
                     )),
-                ) {
-                    Ok(mut child) => {
+                )? {
+                    Some(mut child) => {
                         child.wait()?;
                         let c = match config {
                             Some(c) => c,
@@ -192,7 +209,7 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Child, ShellError>
                             Ok(execute(*right, config)?)
                         }
                     }
-                    Err(e) => Err(e),
+                    None => Ok(None),
                 }
             }
         },

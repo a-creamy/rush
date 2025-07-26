@@ -7,7 +7,9 @@ pub mod stream;
 pub fn interpret(input: String) -> Result<(), error::ShellError> {
     let tokens = lexer::lex(input)?;
     let expr = parser::parse(&tokens)?;
-    executor::execute(expr, None)?.wait()?;
+    if let Some(mut child) = executor::execute(expr, None)? {
+        child.wait()?;
+    }
 
     Ok(())
 }
