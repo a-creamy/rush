@@ -166,6 +166,45 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Option<Child>, She
                     _ => Err(ShellError::from(format!("Unknown fd: {}", fd).as_str())),
                 }
             }
+            Operator::RedirectInput(fd) => {
+                let file = if let Expr::Atomic(a) = *right {
+                    if a.is_empty() {
+                        return Err(ShellError::Unnecassary);
+                    }
+
+                    a[0].clone()
+                } else {
+                    return Err(ShellError::Unnecassary);
+                };
+
+                match fd {
+                    0 => Ok(execute(
+                        *left,
+                        Some(&Config::new(
+                            Stream::Inherit,
+                            Stream::Inherit,
+                            PathBuf::from(file).stream(FileOption::Overwrite),
+                        )),
+                    )?),
+                    1 => Ok(execute(
+                        *left,
+                        Some(&Config::new(
+                            PathBuf::from(file).stream(FileOption::Overwrite),
+                            Stream::Inherit,
+                            Stream::Inherit,
+                        )),
+                    )?),
+                    2 => Ok(execute(
+                        *left,
+                        Some(&Config::new(
+                            Stream::Inherit,
+                            PathBuf::from(file).stream(FileOption::Overwrite),
+                            Stream::Inherit,
+                        )),
+                    )?),
+                    _ => Err(ShellError::from(format!("Unknown fd: {}", fd).as_str())),
+                }
+            }
             Operator::Pipe => {
                 match execute(
                     *left,

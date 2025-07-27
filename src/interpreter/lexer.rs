@@ -13,6 +13,7 @@ pub enum Token {
 
     RedirectOverwrite,
     RedirectAppend,
+    RedirectInput,
 }
 
 impl std::fmt::Display for Token {
@@ -25,6 +26,7 @@ impl std::fmt::Display for Token {
             Token::Separator => write!(f, ";"),
             Token::RedirectOverwrite => write!(f, ">"),
             Token::RedirectAppend => write!(f, ">>"),
+            Token::RedirectInput => write!(f, "<"),
         }
     }
 }
@@ -72,6 +74,10 @@ pub fn lex(input: String) -> Result<Vec<Token>, ShellError> {
                         tokens.push(Token::RedirectOverwrite);
                     }
                 }
+            }
+            '<' => {
+                tokens.push(Token::RedirectInput);
+                source.next();
             }
             'a'..='z' | 'A'..='Z' | '0'..='9' | '.' | '-' | '_' => {
                 let mut atomic = String::new();

@@ -12,6 +12,7 @@ pub enum Operator {
 
     RedirectOverwrite(i8),
     RedirectAppend(i8),
+    RedirectInput(i8),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -78,6 +79,18 @@ fn prefix(tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, ShellError> {
                                     Box::new(right),
                                 ));
                             }
+                            Some(&&Token::RedirectInput) => {
+                                tokens.next();
+                                let right =
+                                    expression(tokens, get_precedence(&Token::RedirectAppend) + 1)?;
+                                return Ok(Expr::Binary(
+                                    Box::new(Expr::Atomic(args)),
+                                    Operator::RedirectInput(
+                                        value.parse::<i8>().expect("Failed to parse into i8"),
+                                    ),
+                                    Box::new(right),
+                                ));
+                            }
                             _ => {}
                         }
                     }
@@ -131,6 +144,11 @@ fn infix(
             Operator::RedirectAppend(1),
             Box::new(right),
         )),
+        Token::RedirectInput => Ok(Expr::Binary(
+            Box::new(left),
+            Operator::RedirectInput(0),
+            Box::new(right),
+        )),
         Token::Pipe => Ok(Expr::Binary(
             Box::new(left),
             Operator::Pipe,
@@ -146,7 +164,7 @@ fn get_precedence(token: &Token) -> u8 {
         Token::Separator => 1,
         Token::LogicalAnd | Token::LogicalOr => 2,
         Token::Pipe => 3,
-        Token::RedirectOverwrite | Token::RedirectAppend => 4,
+        Token::RedirectOverwrite | Token::RedirectAppend | Token::RedirectInput => 4,
     }
 }
 
