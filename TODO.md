@@ -11,5 +11,5 @@ There's a lot to do, the goals might change a lot along the line.
 - [] Allow for pipes to pipe a specefic stream, for example: ```cmdA 2|0 cmdB```. This will pipe ```cmdA```'s stderr to ```cmdB```'s stdin.
 
 ### Redirect
-- [] Add ```<<``` operator, with the above speceficied stream syntax.
-- [] Add ```<<<``` operator, with the above speceficied stream syntax.
+- [] Add ```<<``` operator.
+- [] Add ```<<<``` operator.
