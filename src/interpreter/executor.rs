@@ -124,14 +124,7 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Option<Child>, She
                             Stream::Inherit,
                         )),
                     )?),
-                    _ => Ok(execute(
-                        *left,
-                        Some(&Config::new(
-                            PathBuf::from(file).stream(FileOption::Overwrite),
-                            Stream::Inherit,
-                            Stream::Inherit,
-                        )),
-                    )?),
+                    _ => Err(ShellError::from(format!("Unknown fd: {}", fd).as_str())),
                 }
             }
             Operator::RedirectAppend(fd) => {
@@ -170,14 +163,7 @@ pub fn execute(expr: Expr, config: Option<&Config>) -> Result<Option<Child>, She
                             Stream::Inherit,
                         )),
                     )?),
-                    _ => Ok(execute(
-                        *left,
-                        Some(&Config::new(
-                            PathBuf::from(file).stream(FileOption::Append),
-                            Stream::Inherit,
-                            Stream::Inherit,
-                        )),
-                    )?),
+                    _ => Err(ShellError::from(format!("Unknown fd: {}", fd).as_str())),
                 }
             }
             Operator::Pipe => {
